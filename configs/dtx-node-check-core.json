@@ -1,0 +1,20 @@
+{
+  "environmentName": "DTX Node Check",
+  "common": {
+    "requiredDirectories": [],
+    "requiredFiles": [],
+    "requiredProcesses": [],
+    "requiredServices": [],
+    "requiredTcpListeners": []
+  },
+  "nodes": {
+    "core": {
+      "displayName": "DTX Core",
+      "requiredDirectories": [],
+      "requiredFiles": [],
+      "requiredProcesses": [],
+      "requiredServices": [],
+      "requiredTcpListeners": []
+    }
+  }
+}

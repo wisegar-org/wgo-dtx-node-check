@@ -1,0 +1,240 @@
+using System.Diagnostics;
+using System.Text;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Layout;
+using Avalonia.Media;
+using DtxNodeCheck.Core;
+
+namespace DtxNodeCheck.Desktop.Shared;
+
+public sealed class MainWindow : Window
+{
+    private readonly DtxNodeRole _nodeRole;
+    private readonly string _applicationName;
+    private readonly NodeCheckPaths _paths;
+    private readonly TextBlock _status;
+    private readonly TextBox _log;
+    private readonly ProgressBar _progress;
+    private readonly Button _runButton;
+    private readonly Button _inventoryButton;
+    private readonly Button _openReportButton;
+    private string? _lastReportPath;
+
+    public MainWindow(DtxNodeRole nodeRole, string applicationName)
+    {
+        _nodeRole = nodeRole;
+        _applicationName = applicationName;
+        _paths = NodeCheckService.CreateDefaultPaths(nodeRole, applicationName);
+
+        Title = applicationName;
+        Width = 980;
+        Height = 720;
+        MinWidth = 760;
+        MinHeight = 560;
+
+        var title = new TextBlock
+        {
+            Text = applicationName,
+            FontSize = 24,
+            FontWeight = FontWeight.SemiBold,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+
+        var subtitle = new TextBlock
+        {
+            Text = $"Nodo: {_nodeRole}  |  Config: {_paths.ConfigPath}",
+            Foreground = Brushes.DimGray,
+            TextWrapping = TextWrapping.Wrap
+        };
+
+        _status = new TextBlock
+        {
+            Text = OperatingSystem.IsWindows()
+                ? "Pronto."
+                : "Controlli disponibili solo su Windows.",
+            Margin = new Thickness(0, 14, 0, 8)
+        };
+
+        _progress = new ProgressBar
+        {
+            Minimum = 0,
+            Maximum = 1,
+            Value = 0,
+            Height = 10
+        };
+
+        _log = new TextBox
+        {
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.NoWrap,
+            FontFamily = FontFamily.Parse("Consolas, Menlo, monospace"),
+            Text = ""
+        };
+        ScrollViewer.SetVerticalScrollBarVisibility(_log, ScrollBarVisibility.Auto);
+        ScrollViewer.SetHorizontalScrollBarVisibility(_log, ScrollBarVisibility.Auto);
+
+        _runButton = new Button { Content = "Esegui test", MinWidth = 120 };
+        _runButton.Click += async (_, _) => await RunChecksAsync();
+
+        _inventoryButton = new Button { Content = "Inventario PC", MinWidth = 120 };
+        _inventoryButton.Click += async (_, _) => await RunInventoryAsync();
+
+        _openReportButton = new Button { Content = "Apri report", MinWidth = 120, IsEnabled = false };
+        _openReportButton.Click += (_, _) => OpenLastReport();
+
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Margin = new Thickness(0, 12, 0, 12),
+            Children = { _runButton, _inventoryButton, _openReportButton }
+        };
+
+        var layout = new Grid
+        {
+            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*"),
+            Margin = new Thickness(18)
+        };
+        layout.Children.Add(new StackPanel { Children = { title, subtitle, _status } });
+        Grid.SetRow(_progress, 1);
+        layout.Children.Add(_progress);
+        Grid.SetRow(buttons, 2);
+        layout.Children.Add(buttons);
+        Grid.SetRow(_log, 3);
+        layout.Children.Add(_log);
+
+        Content = layout;
+        Opened += (_, _) => LoadPlan();
+    }
+
+    private void LoadPlan()
+    {
+        AppendLine("Piano controlli");
+        AppendLine("===============");
+
+        if (!OperatingSystem.IsWindows())
+        {
+            AppendLine("Questa applicazione puo' mostrare l'interfaccia su piu' piattaforme, ma i controlli DTX sono Windows-only.");
+            return;
+        }
+
+        try
+        {
+            foreach (var item in NodeCheckService.GetPlannedChecks(_paths.ConfigPath, _nodeRole))
+            {
+                AppendLine($"[PENDING] {item.Category} - {item.Name}: {item.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendLine($"[ERROR] Impossibile caricare il piano controlli: {ex.Message}");
+        }
+    }
+
+    private async Task RunChecksAsync()
+    {
+        SetBusy(true, "Esecuzione controlli...");
+        _progress.Value = 0;
+        _lastReportPath = _paths.ReportPath;
+        _openReportButton.IsEnabled = false;
+
+        try
+        {
+            var planned = NodeCheckService.GetPlannedChecks(_paths.ConfigPath, _nodeRole);
+            _progress.Maximum = Math.Max(planned.Count + 1, 1);
+            var index = 0;
+            foreach (var item in planned)
+            {
+                AppendLine($"[RUNNING] {item.Category} - {item.Name}");
+                _progress.Value = ++index;
+                await Task.Delay(60);
+            }
+
+            var result = await Task.Run(() => NodeCheckService.RunCheck(_paths.ConfigPath, _nodeRole, _paths.ReportPath, _paths.LogPath, openReport: true));
+            _progress.Value = _progress.Maximum;
+            AppendLine("");
+            AppendLine("Risultati");
+            AppendLine("=========");
+            foreach (var item in result.Items)
+            {
+                AppendLine($"[{item.Status.ToUpperInvariant()}] {item.Category} - {item.Name}: {item.Message}");
+            }
+
+            _lastReportPath = result.ReportPath;
+            _openReportButton.IsEnabled = true;
+            _status.Text = result.ExitCode == 0
+                ? $"Completato. Report: {result.ReportPath}"
+                : $"Completato con segnalazioni. Report: {result.ReportPath}";
+        }
+        catch (Exception ex)
+        {
+            AppendLine($"[ERROR] {ex}");
+            _status.Text = ex.Message;
+        }
+        finally
+        {
+            SetBusy(false, _status.Text ?? "Pronto.");
+        }
+    }
+
+    private async Task RunInventoryAsync()
+    {
+        SetBusy(true, "Esecuzione inventario...");
+        _progress.Maximum = 1;
+        _progress.Value = 0;
+
+        try
+        {
+            var reportPath = Path.Combine(Path.GetDirectoryName(_paths.ReportPath) ?? AppContext.BaseDirectory, "DTX-Inventory.html");
+            var logPath = Path.Combine(Path.GetDirectoryName(_paths.LogPath) ?? AppContext.BaseDirectory, "DtxNodeCheck-Inventory-debug.log");
+            AppendLine("[RUNNING] inventory - PC Inventory");
+            var result = await Task.Run(() => NodeCheckService.RunInventory(reportPath, logPath, openReport: true));
+            _progress.Value = 1;
+            _lastReportPath = result.ReportPath;
+            _openReportButton.IsEnabled = true;
+            AppendLine($"[PASS] inventory - Report: {result.ReportPath}");
+            _status.Text = $"Inventario completato. Report: {result.ReportPath}";
+        }
+        catch (Exception ex)
+        {
+            AppendLine($"[ERROR] {ex}");
+            _status.Text = ex.Message;
+        }
+        finally
+        {
+            SetBusy(false, _status.Text ?? "Pronto.");
+        }
+    }
+
+    private void SetBusy(bool busy, string status)
+    {
+        _runButton.IsEnabled = !busy;
+        _inventoryButton.IsEnabled = !busy;
+        _status.Text = status;
+    }
+
+    private void OpenLastReport()
+    {
+        if (string.IsNullOrWhiteSpace(_lastReportPath) || !File.Exists(_lastReportPath))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = _lastReportPath,
+            UseShellExecute = true
+        });
+    }
+
+    private void AppendLine(string line)
+    {
+        var builder = new StringBuilder(_log.Text ?? "");
+        builder.AppendLine(line);
+        _log.Text = builder.ToString();
+        _log.CaretIndex = _log.Text.Length;
+    }
+}

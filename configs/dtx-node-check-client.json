@@ -1,0 +1,26 @@
+{
+  "environmentName": "DTX Node Check",
+  "common": {
+    "requiredDirectories": [],
+    "requiredFiles": [],
+    "requiredProcesses": [],
+    "requiredServices": [],
+    "requiredTcpListeners": []
+  },
+  "nodes": {
+    "client": {
+      "displayName": "DTX Client",
+      "requiredDirectories": [],
+      "requiredFiles": [],
+      "requiredProcesses": [
+        {
+          "name": "DTXStudioClinic",
+          "displayName": "DTX Studio Clinic",
+          "required": false
+        }
+      ],
+      "requiredServices": [],
+      "requiredTcpListeners": []
+    }
+  }
+}

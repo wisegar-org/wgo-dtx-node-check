@@ -1,0 +1,8 @@
+bin/
+obj/
+*.user
+*.suo
+*.pdb
+.vs/
+.DS_Store
+artifacts/node-apps/*/

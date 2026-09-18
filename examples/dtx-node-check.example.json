@@ -1,0 +1,38 @@
+{
+  "environmentName": "DTX Node Check",
+  "common": {
+    "requiredDirectories": [],
+    "requiredFiles": [],
+    "requiredProcesses": [],
+    "requiredServices": [],
+    "requiredTcpListeners": []
+  },
+  "nodes": {
+    "core": {
+      "displayName": "DTX Core",
+      "requiredDirectories": [],
+      "requiredServices": [],
+      "requiredTcpListeners": []
+    },
+    "workstation": {
+      "displayName": "DTX Workstation",
+      "requiredProcesses": [
+        {
+          "name": "DTXStudioClinic",
+          "displayName": "DTX Studio Clinic",
+          "required": false
+        }
+      ]
+    },
+    "client": {
+      "displayName": "DTX Client",
+      "requiredProcesses": [
+        {
+          "name": "DTXStudioClinic",
+          "displayName": "DTX Studio Clinic",
+          "required": false
+        }
+      ]
+    }
+  }
+}
