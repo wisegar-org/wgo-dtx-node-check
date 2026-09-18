@@ -6,3 +6,4 @@ obj/
 .vs/
 .DS_Store
 artifacts/node-apps/*/
+artifacts/inno/

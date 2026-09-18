@@ -44,28 +44,6 @@ Opzioni:
 Su Windows l'eseguibile richiede privilegi amministrativi tramite UAC. Se
 l'app viene eseguita fuori Windows termina con un errore chiaro.
 
-## Shortcut da doppio click
-
-Il pacchetto Debug contiene:
-
-- `Create-Shortcuts.cmd`
-- `Create-Shortcuts.ps1`
-
-Esegui una volta `Create-Shortcuts.cmd` con doppio click. Verranno creati quattro
-shortcut Windows nella stessa cartella:
-
-- `Run DtxNodeCheck Core.lnk`
-- `Run DtxNodeCheck Workstation.lnk`
-- `Run DtxNodeCheck Client.lnk`
-- `Run DtxNodeCheck Inventory.lnk`
-
-Gli shortcut dei nodi eseguono il controllo corrispondente. Lo shortcut
-Inventory crea `DTX-Inventory.json`, utile come base per aggiornare la
-configurazione. Tutti gli shortcut scrivono report e log nella stessa cartella,
-poi aprono automaticamente il report. Gli shortcut sono impostati per
-l'esecuzione come amministratore; anche l'eseguibile richiede UAC tramite
-manifest.
-
 ## Pacchetti Installabili Per Nodo
 
 La cartella `artifacts/node-apps` puo' contenere tre pacchetti separati:
@@ -91,6 +69,29 @@ I report HTML vengono generati con:
 ```powershell
 --format html --open-report
 ```
+
+## Installer Windows
+
+E' disponibile anche un packaging semplice con Inno Setup in
+`packaging/inno`.
+
+Da Windows, con Inno Setup installato:
+
+```cmd
+packaging\inno\Build-InnoInstallers.cmd
+```
+
+Lo script pubblica le tre app Avalonia in `Release` e genera:
+
+```text
+artifacts\inno\DtxNodeCheck-Core-Setup.exe
+artifacts\inno\DtxNodeCheck-Workstation-Setup.exe
+artifacts\inno\DtxNodeCheck-Client-Setup.exe
+```
+
+Gli installer installano in `Program Files`, richiedono privilegi admin,
+creano cartelle report/log in `ProgramData`, shortcut Start Menu/Desktop e
+uninstaller Windows standard.
 
 ## Controlli implementati
 
@@ -160,22 +161,20 @@ Build locale:
 dotnet build
 ```
 
-Pubblicazione come singolo eseguibile Windows x64:
+Pubblicazione manuale delle tre app Windows x64:
 
 ```bash
-dotnet publish src/DtxNodeCheck/DtxNodeCheck.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+dotnet publish src/DtxNodeCheck.CoreApp/DtxNodeCheck.CoreApp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+dotnet publish src/DtxNodeCheck.WorkstationApp/DtxNodeCheck.WorkstationApp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+dotnet publish src/DtxNodeCheck.ClientApp/DtxNodeCheck.ClientApp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
 ```
 
-Pubblicazione Debug per server di test:
-
-```bash
-dotnet publish src/DtxNodeCheck/DtxNodeCheck.csproj -c Debug -r win-x64 --self-contained true /p:PublishSingleFile=true
-```
-
-L'eseguibile viene generato sotto:
+Gli eseguibili vengono generati sotto:
 
 ```text
-src/DtxNodeCheck/bin/Release/net10.0/win-x64/publish/DtxNodeCheck.exe
+src/DtxNodeCheck.CoreApp/bin/Release/net10.0/win-x64/publish/
+src/DtxNodeCheck.WorkstationApp/bin/Release/net10.0/win-x64/publish/
+src/DtxNodeCheck.ClientApp/bin/Release/net10.0/win-x64/publish/
 ```
 
 ## Exit code
