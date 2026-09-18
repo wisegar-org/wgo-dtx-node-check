@@ -1,5 +1,42 @@
 # codex.mem
 
+## Results-only workspace - 0.0.6
+
+- Removed the Activity tab and redundant Results tab header at user request.
+  Results, filters and details are displayed directly in each selected workspace.
+- Removed activity-list controls and their in-memory event buffer. Progress events
+  still update status/results and capture the log path; file logging and explicit
+  opening from the Help menu remain available. Reports never auto-open.
+
+## Manual report opening - 0.0.5
+
+- User requested no automatic report opening. Desktop tests, DTX inspection,
+  PC inventory and save-and-run now generate reports with openReport=false.
+- Apri report remains the explicit action for opening the selected context's report.
+
+## Node selector restored - 0.0.4
+
+- User requested the dropdown instead of the four node tabs, with everything
+  else preserved. MainWindow now uses a ComboBox with no initial selection.
+- The four existing NodeWorkspace instances remain in a shared host; only the
+  selected workspace is visible. Independent state and background run routing
+  remain intact. Inner Results/Activity tabs and guided configuration are unchanged.
+- Regression checks cover selector rendering, explicit selection, one visible
+  workspace, clearing selection, busy guards and independent results/report paths.
+- Windows x64 self-contained package version advanced to 0.0.4.
+
+## Tab rendering fix - 0.0.3
+
+- User screenshot showed no tab headers in 0.0.2. Reproduced with a regression
+  assertion: ManualTabControl.Template was null. Derived Avalonia controls need
+  StyleKeyOverride => typeof(TabControl) to reuse the Fluent theme.
+- The actual rendered results also exposed null item callbacks during list
+  recycling. Both result and activity templates now accept a null item.
+- Smoke checks now inspect the rendered visual tree: four visible nonzero-sized
+  tab headers before selection, no auto-selected role, and selected workspace
+  content present. Earlier model-only assertions missed this rendering defect.
+- Version metadata and Inno setup advanced to 0.0.3 for the corrected installer.
+
 ## Tabs and guided configuration implemented — 2026-09-19
 
 - Current version 0.0.2, aligned .NET metadata, manifest and Inno installer.

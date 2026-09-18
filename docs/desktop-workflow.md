@@ -1,9 +1,9 @@
-# Tab e configurazione guidata — 0.0.2
+# Selettore e configurazione guidata — 0.0.4
 
-I quattro tab rappresentano ruoli sul **PC corrente**, non computer remoti.
-Nessun tab è selezionato all'avvio. La scelta non avvia scansioni o test.
+I quattro contesti del selettore rappresentano ruoli sul **PC corrente**, non computer remoti.
+Nessun contesto è selezionato all'avvio. La scelta non avvia scansioni o test.
 
-| Tab | Contesto |
+| Selettore | Contesto |
 | --- | --- |
 | DTX Core | Servizi, identità, rete e comunicazioni del server |
 | Workstation | Acquisizione/ricostruzione, utente operativo e directory DTX |
@@ -12,7 +12,7 @@ Nessun tab è selezionato all'avvio. La scelta non avvia scansioni o test.
 
 ## Configurare un nodo
 
-1. Selezionare il tab DTX e premere **Configura nodo**.
+1. Selezionare il nodo DTX e premere **Configura nodo**.
 2. Inserire il nome approvato all'installazione. **Rileva dati locali** mostra le
    schede con indirizzi e DNS: selezionare quella DTX, senza approvare implicitamente
    i dati osservati. IPv4 statico e IPv6 disabilitato restano requisiti fissi.
@@ -46,13 +46,11 @@ Le osservazioni locali sono **OSSERVATO**, separate da **SUPERATO**.
 **DA VERIFICARE** include dati mancanti, limiti di lettura e requisiti manuali.
 Le annotazioni manuali non trasformano una verifica in PASS.
 
-**Attività** riporta ora, livello, fase e messaggio. Attivare **Mostra diagnostica**
-per i messaggi tecnici, selezionandoli per leggere i dettagli. Lo scorrimento con
-rotella sospende **Segui attività**; riattivarlo per seguire nuovi messaggi.
-**Copia attività** copia gli eventi mantenuti in memoria; **Esporta log completo**
-copia il file diagnostico dell'esecuzione. Il limite in memoria è 2000 eventi.
+I risultati sono mostrati direttamente, senza il tab Attività. La fase corrente
+resta visibile nello stato dell'esecuzione. La diagnostica viene conservata su file:
+usare **Aiuto > Apri log completo del contesto selezionato** per consultarla.
 
-È possibile consultare altri tab durante una prova: risultati e report restano
+È possibile selezionare altri contesti durante una prova: risultati e report restano
 nel contesto che l'ha avviata. Tutte le nuove operazioni e le modifiche alla config
 sono bloccate fino alla fine. **Interrompi** cancella DNS/TCP pendenti e ferma le
 successive fasi locali; una chiamata nativa già in corso termina prima dello stop.

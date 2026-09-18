@@ -14,7 +14,8 @@ public sealed class MainWindow : Window
     private readonly NodeWorkspace[] _workspaces = [
         new(DtxNodeRole.Core), new(DtxNodeRole.Workstation), new(DtxNodeRole.Client), new(null)
     ];
-    private readonly TabControl _tabs = new ManualTabControl();
+    private readonly ComboBox _nodeSelector = new() { PlaceholderText = "Seleziona nodo", MinWidth = 190, SelectedIndex = -1 };
+    private readonly Grid _workspaceHost = new();
     private readonly Button _runButton = new() { Content = "Esegui test" };
     private readonly Button _inspectButton = new() { Content = "Ispeziona DTX" };
     private readonly Button _inventoryButton = new() { Content = "Ispeziona PC" };
@@ -24,10 +25,10 @@ public sealed class MainWindow : Window
     private readonly MenuItem _openConfigButton = new() { Header = "Apri appsettings.json" };
     private readonly MenuItem _reloadConfigButton = new() { Header = "Ricarica piano" };
     private readonly MenuItem _inventorySettingsButton = new() { Header = "Impostazioni da inventario…" };
-    private readonly TextBlock _status = new() { Text = "Seleziona un tab per iniziare. Nessun nodo viene scelto automaticamente.", TextWrapping = TextWrapping.Wrap };
+    private readonly TextBlock _status = new() { Text = "Seleziona un nodo per iniziare. Nessun nodo viene scelto automaticamente.", TextWrapping = TextWrapping.Wrap };
     private bool _busy;
     private CancellationTokenSource? _cancellation;
-    private NodeWorkspace? Current => _tabs.SelectedIndex >= 0 ? _workspaces[_tabs.SelectedIndex] : null;
+    private NodeWorkspace? Current => _nodeSelector.SelectedIndex >= 0 ? _workspaces[_nodeSelector.SelectedIndex] : null;
     private static string ConfigPath => NodeCheckService.CreateDefaultConfigPath(AppSettings.ConfigFileName);
 
     public MainWindow()
@@ -49,18 +50,19 @@ public sealed class MainWindow : Window
         }
         var about = new MenuItem { Header = "_Informazioni" };
         about.Click += async (_, _) => await ShowMessageAsync("Informazioni", $"{AppSettings.ApplicationName}\nVersione {typeof(MainWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}\nWindows x64 · self-contained\n\nControlli in sola lettura. DNS/TCP sui target configurati solo durante test richiesti, con timeout.\n\nConfigurazione: {ConfigPath}");
-        var log = new MenuItem { Header = "Apri log completo del tab" };
+        var log = new MenuItem { Header = "Apri log completo del contesto selezionato" };
         log.Click += (_, _) => { if (Current?.LogPath is { } path) OpenFile(path); };
         var help = new MenuItem { Header = "_Aiuto", ItemsSource = new Control[] { docs, log, about } };
         var toolbar = new WrapPanel { Name = "MainToolbar", Children = {
-            _configureButton, _runButton, _inspectButton, _inventoryButton, _openReportButton, _cancelButton,
+            _nodeSelector, _configureButton, _runButton, _inspectButton, _inventoryButton, _openReportButton, _cancelButton,
             new Menu { ItemsSource = new[] { configMenu, help } }
         } };
         foreach (var control in toolbar.Children) { control.Margin = new Thickness(0, 4, 8, 4); control.VerticalAlignment = VerticalAlignment.Center; }
-        _tabs.ItemsSource = _workspaces.Select(x => new TabItem { Header = x.Label, Content = x }).ToArray();
-        _tabs.SelectedIndex = -1;
-        _tabs.SelectionChanged += (_, e) => {
-            if (!ReferenceEquals(e.Source, _tabs)) return;
+        _nodeSelector.ItemsSource = _workspaces.Select(x => x.Label).ToArray();
+        Avalonia.Automation.AutomationProperties.SetName(_nodeSelector, "Nodo da controllare");
+        foreach (var view in _workspaces) { view.IsVisible = false; _workspaceHost.Children.Add(view); }
+        _nodeSelector.SelectionChanged += (_, _) => {
+            foreach (var view in _workspaces) view.IsVisible = ReferenceEquals(view, Current);
             if (Current is { Role: not null, Results.Count: 0 } workspace) LoadPlan(workspace);
             UpdateControls();
         };
@@ -77,7 +79,7 @@ public sealed class MainWindow : Window
         grid.Children.Add(new TextBlock { Text = AppSettings.ApplicationName, FontSize = 24, FontWeight = FontWeight.SemiBold });
         Grid.SetRow(toolbar, 1); grid.Children.Add(toolbar);
         _status.Margin = new Thickness(0, 5, 0, 12); Grid.SetRow(_status, 2); grid.Children.Add(_status);
-        Grid.SetRow(_tabs, 3); grid.Children.Add(_tabs);
+        Grid.SetRow(_workspaceHost, 3); grid.Children.Add(_workspaceHost);
         Content = grid;
         Closing += (_, e) => { if (_busy) { e.Cancel = true; _status.Text = "Attendere il completamento oppure interrompere il test prima di chiudere."; } };
         UpdateControls();
@@ -111,7 +113,7 @@ public sealed class MainWindow : Window
         origin.Progress.IsVisible = origin.Progress.IsIndeterminate = true;
         _cancellation = new CancellationTokenSource();
         _cancelButton.IsVisible = true; _cancelButton.IsEnabled = true;
-        _status.Text = $"{origin.Label}: operazione in corso. Puoi consultare gli altri tab.";
+        _status.Text = $"{origin.Label}: operazione in corso. Puoi selezionare gli altri contesti.";
         var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), AppSettings.ApplicationName);
         var progress = new UiProgress(activity => origin.AddActivity(activity));
         try
@@ -121,13 +123,13 @@ public sealed class MainWindow : Window
             NodeCheckExecutionResult result;
             if (inventory)
                 result = await Task.Run(() => NodeCheckService.RunInventory(Path.Combine(root, "Reports", "PC-Inventory.html"),
-                    Path.Combine(root, "Logs", "PC-Inventory.log"), true, progress, _cancellation.Token));
+                    Path.Combine(root, "Logs", "PC-Inventory.log"), openReport: false, progress, _cancellation.Token));
             else
             {
                 var role = origin.Role!.Value;
                 var paths = NodeCheckService.CreateDefaultPaths(role, AppSettings.ApplicationName);
                 var token = _cancellation!.Token;
-                result = await Task.Run(() => NodeCheckService.RunCheck(paths.ConfigPath, role, paths.ReportPath, paths.LogPath, true, inspect, progress, token));
+                result = await Task.Run(() => NodeCheckService.RunCheck(paths.ConfigPath, role, paths.ReportPath, paths.LogPath, openReport: false, inspect, progress, token));
             }
             // Flush progress queued by the worker before publishing the final status.
             await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
@@ -200,10 +202,6 @@ public sealed class MainWindow : Window
         public void Report(NodeActivity value) => Dispatcher.UIThread.Post(() => callback(value));
     }
 
-    private sealed class ManualTabControl : TabControl
-    {
-        public ManualTabControl() { SelectionMode = SelectionMode.Single; SelectedIndex = -1; }
-    }
 
     private static Window CreateInventorySettingsConfirmation(DtxNodeRole role, string configPath)
     {

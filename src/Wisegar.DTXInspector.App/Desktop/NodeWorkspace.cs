@@ -1,11 +1,8 @@
-using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Platform.Storage;
-using Avalonia.Input.Platform;
 using Wisegar.DTXInspector.Core;
 
 namespace Wisegar.DTXInspector.Desktop;
@@ -25,12 +22,6 @@ public sealed class NodeWorkspace : Grid
     private readonly TextBlock _counts = new() { TextWrapping = TextWrapping.Wrap };
     private readonly ListBox _results = new();
     private readonly TextBox _details = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 95 };
-    private readonly ObservableCollection<NodeActivity> _events = [];
-    private readonly ObservableCollection<NodeActivity> _visibleEvents = [];
-    private readonly ListBox _activity = new();
-    private readonly CheckBox _follow = new() { Content = "Segui attività", IsChecked = true };
-    private readonly CheckBox _technical = new() { Content = "Mostra diagnostica" };
-    private readonly TextBox _eventDetails = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 80 };
 
     public NodeWorkspace(DtxNodeRole? role)
     {
@@ -56,6 +47,7 @@ public sealed class NodeWorkspace : Grid
         Grid.SetRow(filters, 2); Children.Add(filters);
         _results.ItemTemplate = new FuncDataTemplate<NodeCheckItem>((item, _) =>
         {
+            if (item is null) return null;
             var brush = item!.Status switch { "Fail" => Brushes.Firebrick, "Warning" => Brushes.DarkGoldenrod, "Pass" => Brushes.ForestGreen, _ => Brushes.SlateGray };
             return new StackPanel { Margin = new Thickness(4, 5), Spacing = 3, Children = {
                 new TextBlock { Text = $"{StatusLabel(item.Status)}  ·  {item.Category}  ·  {item.Name}", Foreground = brush, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
@@ -67,55 +59,11 @@ public sealed class NodeWorkspace : Grid
             if (_results.SelectedItem is NodeCheckItem item)
                 _details.Text = $"{item.Name}\n{item.Message}\n\n" + string.Join("\n", item.Details?.Select(x => $"{x.Key}: {x.Value}") ?? []);
         };
-        _activity.ItemTemplate = new FuncDataTemplate<NodeActivity>((entry, _) => new TextBlock
-        {
-            Text = $"{entry!.Time:HH:mm:ss}  [{entry.Level}]  {entry.Phase} — {entry.Message}", TextWrapping = TextWrapping.Wrap,
-            Foreground = entry.Level == "ERROR" ? Brushes.Firebrick : Brushes.DimGray, Margin = new Thickness(4)
-        });
-        _activity.SelectionChanged += (_, _) => _eventDetails.Text = (_activity.SelectedItem as NodeActivity)?.Details;
-        _activity.ItemsSource = _visibleEvents;
-        // Wheel navigation suspends follow; the user can explicitly resume it.
-        _activity.PointerWheelChanged += (_, _) => _follow.IsChecked = false;
-        _technical.IsCheckedChanged += (_, _) => RefreshActivity();
         var resultLayout = new Grid { RowDefinitions = new RowDefinitions("*,Auto") };
         resultLayout.Children.Add(_results);
         var detail = new Expander { Header = "Dettagli del controllo selezionato", Content = _details, HorizontalAlignment = HorizontalAlignment.Stretch };
         Grid.SetRow(detail, 1); resultLayout.Children.Add(detail);
-        var activityLayout = new Grid { RowDefinitions = new RowDefinitions("Auto,*,Auto") };
-        var copy = new Button { Content = "Copia attività" };
-        copy.Click += async (_, _) =>
-        {
-            try
-            {
-                if (TopLevel.GetTopLevel(this)?.Clipboard is { } clipboard)
-                    await clipboard.SetTextAsync(string.Join("\n", _events.Select(x => $"{x.Time:O} [{x.Level}] {x.Phase}: {x.Message}")));
-            }
-            catch (Exception ex) { Status.Text = ex.Message; }
-        };
-        var export = new Button { Content = "Esporta log completo" };
-        export.Click += async (_, _) =>
-        {
-            try
-            {
-                if (LogPath is null || !File.Exists(LogPath)) { Status.Text = "Nessun log di esecuzione disponibile per questo tab."; return; }
-                if (TopLevel.GetTopLevel(this) is not { } top) return;
-                var file = await top.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions { Title = "Esporta log", SuggestedFileName = Path.GetFileName(LogPath) });
-                if (file is null) return;
-                if (string.Equals(file.TryGetLocalPath(), LogPath, StringComparison.OrdinalIgnoreCase)) { Status.Text = "Il file scelto è già il log originale."; return; }
-                var bytes = await File.ReadAllBytesAsync(LogPath);
-                await using var output = await file.OpenWriteAsync(); output.SetLength(0); await output.WriteAsync(bytes);
-            }
-            catch (Exception ex) { Status.Text = ex.Message; }
-        };
-        activityLayout.Children.Add(new WrapPanel { Children = { _follow, _technical, copy, export } });
-        Grid.SetRow(_activity, 1); activityLayout.Children.Add(_activity);
-        var technicalDetails = new Expander { Header = "Dettagli tecnici dell'evento", Content = _eventDetails, HorizontalAlignment = HorizontalAlignment.Stretch };
-        Grid.SetRow(technicalDetails, 2); activityLayout.Children.Add(technicalDetails);
-        var pages = new TabControl { ItemsSource = new[] {
-            new TabItem { Header = "Risultati", Content = resultLayout },
-            new TabItem { Header = "Attività", Content = activityLayout }
-        } };
-        Grid.SetRow(pages, 3); Children.Add(pages);
+        Grid.SetRow(resultLayout, 3); Children.Add(resultLayout);
         Search.TextChanged += (_, _) => RefreshResults();
         Filter.SelectionChanged += (_, _) => RefreshResults();
         Category.SelectionChanged += (_, _) => RefreshResults();
@@ -155,10 +103,6 @@ public sealed class NodeWorkspace : Grid
             SetResults(updated);
             return;
         }
-        _events.Add(item);
-        if (_technical.IsChecked == true || item.Level != "DEBUG") _visibleEvents.Add(item);
-        if (_events.Count > 2000) { var expired = _events[0]; _events.RemoveAt(0); _visibleEvents.Remove(expired); }
-        if (_follow.IsChecked == true && _visibleEvents.Count > 0) _activity.ScrollIntoView(_visibleEvents[^1]);
         if (item.Level == "INFO") Status.Text = $"{item.Phase}: {item.Message}";
     }
 
@@ -168,13 +112,6 @@ public sealed class NodeWorkspace : Grid
         _results.ItemsSource = Results.Where(x => (Filter.SelectedIndex <= 0 || x.Status == Filter.SelectedItem?.ToString())
             && (Category.SelectedIndex <= 0 || x.Category == Category.SelectedItem?.ToString())
             && $"{x.Name} {x.Category} {x.Message}".Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray();
-    }
-
-    private void RefreshActivity()
-    {
-        _visibleEvents.Clear();
-        foreach (var item in _events.Where(x => _technical.IsChecked == true || x.Level != "DEBUG")) _visibleEvents.Add(item);
-        if (_follow.IsChecked == true && _visibleEvents.Count > 0) _activity.ScrollIntoView(_visibleEvents[^1]);
     }
 
     private static string StatusLabel(string status) => status switch {

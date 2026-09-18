@@ -150,13 +150,13 @@ The preferred future state is a single branded app:
 - one unified config file
 - request manual node selection at startup
 - manual override in UI
-- HTML reports opened automatically after test/inventory runs
+- Generate HTML reports after test/inventory runs, but open them only when the user clicks Apri report; never automatically.
 - self-contained deploys for Windows x64 only
 
-The desktop now has four explicit tabs: DTX Core, Workstation, Client and PC
-inspection (the last is not a DTX role). Never enable automatic first-tab selection.
-Keep results, activity, filters and report/log paths bound to the originating tab
-when users change tabs during an operation. Only one operation runs at a time.
+The desktop uses a dropdown selector for DTX Core, Workstation, Client and PC
+inspection (the last is not a DTX role). Do not replace it with node tabs or select
+a context automatically. Keep results, activity, filters and report/log paths bound
+to the originating context when the selection changes. Only one operation runs at a time.
 Cancellation must retain the mandatory checklist in partial node reports and must
 not convert unexecuted checks to PASS or NotApplicable. Observed inventory data
 is distinct from successful checks.
