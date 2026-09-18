@@ -106,6 +106,10 @@ during inventory. Missing targets must produce WARNING.
 
 ## Build And Publish
 
+Version numbering starts at `0.0.1` per user request. Keep .NET version metadata
+in Directory.Build.props, the app manifest and Inno AppVersion aligned. Earlier
+1.0.x version references in codex.mem are historical.
+
 Build:
 
 ```bash

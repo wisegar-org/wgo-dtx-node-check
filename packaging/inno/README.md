@@ -3,7 +3,7 @@
 Questa cartella contiene l'installer Windows unico di WGO DTX Inspector.
 L'unico script installer e' `Wisegar.DTXInspector.Setup.iss`.
 
-Il setup 1.0.1 corregge l'errore 740 all'avvio finale: `runascurrentuser` usa
+Il setup evita l'errore 740 all'avvio finale: `runascurrentuser` usa
 il contesto amministrativo del setup, richiesto dal manifest dell'app.
 Mantenere questo flag finche l'app richiede `requireAdministrator`.
 Riferimento: [Inno Setup, sezione Run](https://jrsoftware.org/ishelp/topic_runsection.htm).
@@ -31,7 +31,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Output:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-1.0.5.exe
+installers\Wisegar.DTXInspector.Setup-0.0.1.exe
 ```
 
 ## Comportamento Installer

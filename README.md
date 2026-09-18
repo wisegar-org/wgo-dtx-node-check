@@ -106,7 +106,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-1.0.5.exe
+installers\Wisegar.DTXInspector.Setup-0.0.1.exe
 ```
 
 L'installer installa in `Program Files\WGO DTX Inspector`, richiede privilegi

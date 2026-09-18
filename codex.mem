@@ -2,6 +2,13 @@
 
 ## Continuation on Windows - 2026-09-18
 
+### Version scheme reset to 0.0.1
+
+- User requested 0.0.1 instead of the 1.0.x scheme. Current app/library version,
+  assembly/file metadata, manifest and Inno installer now start at 0.0.1.
+- Output: installers/Wisegar.DTXInspector.Setup-0.0.1.exe. Existing features and
+  installer AppId retained. Prior version numbers below are historical only.
+
 ### DTX inspection
 
 - New Ispeziona DTX toolbar action requires a manually selected role and observes
