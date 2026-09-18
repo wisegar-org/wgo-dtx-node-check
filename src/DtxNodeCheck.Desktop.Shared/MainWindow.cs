@@ -126,18 +126,25 @@ public sealed class MainWindow : Window
         _openConfigButton.Click += (_, _) => OpenConfigFile();
 
         _reloadConfigButton = new Button { Content = "Ricarica config", MinWidth = 120 };
-        _reloadConfigButton.Click += (_, _) => ReloadPlan();
+        _reloadConfigButton.Click += async (_, _) =>
+        {
+            if (_nodeRole is null && _inferNodeRole)
+                await InitializeNodeSelectionAsync();
+            else
+                ReloadPlan();
+        };
 
         _aboutButton = new Button { Content = "About", MinWidth = 96 };
         _aboutButton.Click += async (_, _) => await ShowAboutAsync();
 
-        var buttons = new StackPanel
+        var buttons = new WrapPanel
         {
             Orientation = Orientation.Horizontal,
-            Spacing = 8,
             Margin = new Thickness(0, 12, 0, 12),
             Children = { _nodeSelector, _runButton, _inventoryButton, _openReportButton, _openConfigButton, _reloadConfigButton, _aboutButton }
         };
+        foreach (var button in buttons.Children)
+            button.Margin = new Thickness(0, 0, 8, 8);
 
         var documentationLinks = CreateDocumentationLinks();
 
@@ -157,7 +164,9 @@ public sealed class MainWindow : Window
         layout.Children.Add(_log);
 
         Content = layout;
-        Opened += (_, _) => InitializeNodeSelection();
+        UpdateControlsForNode();
+        _nodeSelector.IsEnabled = _inferNodeRole;
+        Opened += async (_, _) => await InitializeNodeSelectionAsync();
     }
 
     private Control CreateDocumentationLinks()
@@ -205,12 +214,27 @@ public sealed class MainWindow : Window
         LoadPlan();
     }
 
-    private void InitializeNodeSelection()
+    private async Task InitializeNodeSelectionAsync()
     {
         if (_nodeRole is null && _inferNodeRole)
         {
             var configPath = NodeCheckService.CreateDefaultConfigPath(_configFileName ?? "dtx-node-check.json");
-            var detection = NodeCheckService.DetectNodeRole(configPath);
+            SetBusy(true, "Rilevamento nodo in corso...");
+            NodeDetectionResult detection;
+            try
+            {
+                detection = await Task.Run(() => NodeCheckService.DetectNodeRole(configPath));
+            }
+            catch (Exception ex)
+            {
+                AppendLine($"[ERROR] detection - {ex.Message}");
+                _status.Text = "Rilevamento non disponibile. Seleziona il nodo manualmente.";
+                return;
+            }
+            finally
+            {
+                SetBusy(false, _status.Text ?? "Seleziona Core, Workstation o Client.");
+            }
             AppendLine("Inferenza nodo");
             AppendLine("==============");
             AppendLine($"[INFO] detection - {detection.Message}");
@@ -281,7 +305,7 @@ public sealed class MainWindow : Window
         _status.Text = status;
         if (reloadPlan)
         {
-            ReloadPlan();
+            LoadPlan();
         }
     }
 
@@ -295,9 +319,10 @@ public sealed class MainWindow : Window
     private void UpdateControlsForNode()
     {
         var hasNode = _nodeRole is not null && _paths is not null;
-        _runButton.IsEnabled = hasNode;
-        _openConfigButton.IsEnabled = hasNode;
-        _reloadConfigButton.IsEnabled = hasNode;
+        _runButton.IsEnabled = hasNode && OperatingSystem.IsWindows();
+        _inventoryButton.IsEnabled = OperatingSystem.IsWindows();
+        _openConfigButton.IsEnabled = hasNode || _configFileName is not null;
+        _reloadConfigButton.IsEnabled = hasNode || _inferNodeRole;
     }
 
     private void LoadPlan()
@@ -417,11 +442,12 @@ public sealed class MainWindow : Window
 
     private void SetBusy(bool busy, string status)
     {
-        _runButton.IsEnabled = !busy;
-        _inventoryButton.IsEnabled = !busy;
-        _nodeSelector.IsEnabled = !busy;
-        _openConfigButton.IsEnabled = !busy && _paths is not null;
-        _reloadConfigButton.IsEnabled = !busy && _paths is not null;
+        UpdateControlsForNode();
+        _runButton.IsEnabled &= !busy;
+        _inventoryButton.IsEnabled &= !busy;
+        _nodeSelector.IsEnabled = !busy && _inferNodeRole;
+        _openConfigButton.IsEnabled &= !busy;
+        _reloadConfigButton.IsEnabled &= !busy;
         _aboutButton.IsEnabled = !busy;
         _status.Text = status;
     }
@@ -506,8 +532,8 @@ public sealed class MainWindow : Window
         builder.AppendLine($"Assembly: {typeof(MainWindow).Assembly.GetName().Name}");
         builder.AppendLine($"Base directory: {AppContext.BaseDirectory}");
         builder.AppendLine();
-        builder.AppendLine("Runtime");
-        builder.AppendLine("=======");
+        builder.AppendLine("Ambiente");
+        builder.AppendLine("========");
         builder.AppendLine($"OS: {Environment.OSVersion}");
         builder.AppendLine($"Windows: {(OperatingSystem.IsWindows() ? "si" : "no")}");
         builder.AppendLine($"Architettura processo: {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}");
@@ -536,16 +562,10 @@ public sealed class MainWindow : Window
 
     private void OpenConfigFile()
     {
-        if (_paths is null)
+        var configPath = _paths?.ConfigPath ?? NodeCheckService.CreateDefaultConfigPath(_configFileName ?? "dtx-node-check.json");
+        if (!File.Exists(configPath))
         {
-            AppendLine("[ERROR] config - Nodo non selezionato.");
-            _status.Text = "Seleziona un nodo prima di aprire la config.";
-            return;
-        }
-
-        if (!File.Exists(_paths.ConfigPath))
-        {
-            AppendLine($"[ERROR] config - File non trovato: {_paths.ConfigPath}");
+            AppendLine($"[ERROR] config - File non trovato: {configPath}");
             _status.Text = "File di configurazione non trovato.";
             return;
         }
@@ -554,15 +574,15 @@ public sealed class MainWindow : Window
         {
             Process.Start(new ProcessStartInfo
             {
-                FileName = _paths.ConfigPath,
+                FileName = configPath,
                 UseShellExecute = true
             });
-            AppendLine($"[INFO] config - Apertura file per modifica: {_paths.ConfigPath}");
+            AppendLine($"[INFO] config - Apertura file per modifica: {configPath}");
             _status.Text = "Config aperta. Usa Ricarica config dopo il salvataggio.";
         }
         catch (Exception ex)
         {
-            AppendLine($"[ERROR] config - Impossibile aprire {_paths.ConfigPath}: {ex.Message}");
+            AppendLine($"[ERROR] config - Impossibile aprire {configPath}: {ex.Message}");
             _status.Text = "Impossibile aprire il file di configurazione.";
         }
     }

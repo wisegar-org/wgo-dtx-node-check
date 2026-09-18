@@ -10,5 +10,8 @@
     <Error
       Condition="'$(SelfContained)' != 'true'"
       Text="DtxNodeCheck desktop deploy must be self-contained. The project sets SelfContained=true when a RuntimeIdentifier is provided; do not override it." />
+    <Error
+      Condition="'$(PublishSingleFile)' != 'true' Or '$(IncludeNativeLibrariesForSelfExtract)' != 'true'"
+      Text="DtxNodeCheck desktop deploy must be single-file and include native libraries for self extraction; do not override these publish settings." />
   </Target>
 </Project>

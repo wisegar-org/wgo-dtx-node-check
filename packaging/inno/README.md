@@ -1,6 +1,7 @@
 # Inno Setup Packaging
 
-Questa cartella contiene un packaging Windows semplice basato su Inno Setup.
+Questa cartella contiene l'installer Windows unico di WGO DTX Node Check.
+Il file principale e' `WgoDtxNodeCheck.iss`; gli altri `.iss` sono legacy.
 
 ## Requisiti
 
@@ -25,9 +26,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Output:
 
 ```text
-artifacts\inno\DtxNodeCheck-Core-Setup.exe
-artifacts\inno\DtxNodeCheck-Workstation-Setup.exe
-artifacts\inno\DtxNodeCheck-Client-Setup.exe
+artifacts\inno\WgoDtxNodeCheck-Setup.exe
 ```
 
 ## Comportamento Installer
@@ -38,4 +37,9 @@ artifacts\inno\DtxNodeCheck-Client-Setup.exe
 - Crea shortcut nel menu Start.
 - Offre opzionalmente shortcut desktop.
 - Registra l'uninstaller standard di Windows.
+- Pubblica solo `DtxNodeCheck.App`, self-contained e single-file per Windows x64.
+- Include `dtx-node-check.json` accanto a `WgoDtxNodeCheck.exe`.
+- Conserva il JSON esistente durante aggiornamento e disinstallazione.
+- Mantiene separate le installazioni legacy: trasferire manualmente eventuali
+  controlli personalizzati nel JSON unico prima di disinstallare le vecchie app.
 

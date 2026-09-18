@@ -1,5 +1,32 @@
 # codex.mem
 
+## Continuation on Windows - 2026-09-18
+
+- Unified app remains the primary product; legacy projects remain for compatibility.
+- Default Inno build now publishes only `DtxNodeCheck.App` and uses
+  `packaging/inno/WgoDtxNodeCheck.iss` to produce `WgoDtxNodeCheck-Setup.exe`.
+- Installer keeps the external unified JSON on upgrades and uninstall; previous
+  per-node installs/configurations are not automatically migrated or removed.
+- Startup detection runs asynchronously and failures allow manual selection.
+- Detection reasons remain in the visible log after automatic node selection.
+- Config can be opened before a node is selected; reload retries detection when
+  no node is selected, and preserves a selected role otherwise.
+- Tests stay disabled without a node after an operation completes; Windows-only
+  actions stay disabled on other platforms. Legacy apps keep their fixed role.
+- Toolbar wraps at smaller window widths.
+- Publish validation also rejects disabling single-file/native-library bundling.
+- README now documents the desktop workflow instead of unsupported CLI arguments.
+- Added desktop regression smoke checks in `tests/DtxNodeCheck.Desktop.Smoke`.
+- Verified: solution build (zero warnings/errors), desktop smoke checks,
+  Windows x64 and macOS ARM64 self-contained publish, rejection of missing RID,
+  framework-dependent deploy and disabled single-file deploy.
+- Local publish outputs: `artifacts/deploy/win-x64` and
+  `artifacts/deploy/osx-arm64` (ignored by git).
+- Inno Setup is absent in this environment: installer compilation and actual
+  install/upgrade/uninstall have not been tested. macOS output has not been run
+  on macOS or packaged as a signed `.app` in this continuation.
+- User requested committing this continuation as `Unify desktop packaging and node selection workflow`.
+
 This file records the working memory of the conversation for this repository.
 It is intentionally written as an operational memory rather than a polished user
 manual.

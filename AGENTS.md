@@ -51,6 +51,8 @@ Supported node roles:
 - `Directory.Build.targets`: blocks desktop publish without Runtime Identifier
   and without self-contained deploy.
 - `packaging/inno`: Inno Setup packaging for Windows installers.
+  `Build-InnoInstallers.cmd` now builds the unified `WgoDtxNodeCheck.iss` only.
+  Existing per-node scripts remain legacy compatibility sources.
 - `README.md`: user-facing project documentation.
 - `codex.mem`: conversation and project memory.
 
@@ -76,6 +78,12 @@ dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r osx-ar
 
 Do not publish desktop apps without `-r <RID>`. The repository intentionally
 fails such publishes.
+
+Desktop regression smoke checks (requires a desktop environment):
+
+```bash
+dotnet run --project tests/DtxNodeCheck.Desktop.Smoke
+```
 
 ## Engineering Notes
 

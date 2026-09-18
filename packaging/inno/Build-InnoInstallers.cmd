@@ -18,30 +18,24 @@ if not exist "%ISCC%" (
 
 pushd "%ROOT_DIR%" >nul
 
-dotnet publish src\DtxNodeCheck.CoreApp\DtxNodeCheck.CoreApp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
-if errorlevel 1 exit /b 1
+set "DOTNET=dotnet"
+where dotnet >nul 2>nul
+if errorlevel 1 set "DOTNET=%ProgramFiles%\dotnet\dotnet.exe"
 
-dotnet publish src\DtxNodeCheck.WorkstationApp\DtxNodeCheck.WorkstationApp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
-if errorlevel 1 exit /b 1
-
-dotnet publish src\DtxNodeCheck.ClientApp\DtxNodeCheck.ClientApp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
-if errorlevel 1 exit /b 1
+"%DOTNET%" publish src\DtxNodeCheck.App\DtxNodeCheck.App.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+if errorlevel 1 goto failed
 
 if not exist artifacts\inno mkdir artifacts\inno
 
-pushd packaging\inno >nul
+"%ISCC%" packaging\inno\WgoDtxNodeCheck.iss
+if errorlevel 1 goto failed
 
-"%ISCC%" DtxNodeCheck-Core.iss
-if errorlevel 1 exit /b 1
-
-"%ISCC%" DtxNodeCheck-Workstation.iss
-if errorlevel 1 exit /b 1
-
-"%ISCC%" DtxNodeCheck-Client.iss
-if errorlevel 1 exit /b 1
-
-popd >nul
 popd >nul
 
 echo.
-echo Installer generati in artifacts\inno
+echo Installer generato: artifacts\inno\WgoDtxNodeCheck-Setup.exe
+exit /b 0
+
+:failed
+popd >nul
+exit /b 1

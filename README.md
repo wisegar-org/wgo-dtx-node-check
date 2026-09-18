@@ -1,4 +1,4 @@
-# DtxNodeCheck
+# WGO DTX Node Check
 
 App .NET 10 in C# per controlli read-only sui nodi DTX Studio Clinic:
 Core, Workstation e Client. La soluzione contiene una libreria condivisa, una
@@ -6,19 +6,13 @@ app desktop Avalonia UI unica e tre app desktop legacy, una per nodo.
 
 L'app sostituisce gli script PowerShell esistenti senza eseguire PowerShell,
 comandi shell o chiamate di rete durante i controlli. I controlli sono locali e in sola lettura.
-Le uniche scritture runtime avvengono quando vengono passati esplicitamente
-`--report` o `--log`.
+Report e log vengono scritti quando si avviano test o inventario dalla finestra.
+Il solo avvio dell'app non crea report o log.
 
 ## Uso
 
 ```powershell
-DtxNodeCheck.exe --config .\dtx-node-check.json --node workstation
-DtxNodeCheck.exe --config .\dtx-node-check.json --node core --report .\DTX-Core-Report.txt
-DtxNodeCheck.exe --config .\dtx-node-check.json --node client --report .\DTX-Client-Report.json --format json
-DtxNodeCheck.exe --config .\dtx-node-check.json --node core --report .\DTX-Core-Report.html --format html --open-report
-DtxNodeCheck.exe --config .\dtx-node-check.json --node core --log .\DtxNodeCheck-debug.log
-DtxNodeCheck.exe --config .\dtx-node-check.json --node core --report .\DTX-Core-Report.txt --open-report
-DtxNodeCheck.exe --inventory --report .\DTX-Inventory.json --format json --open-report
+.\WgoDtxNodeCheck.exe
 ```
 
 La CLI storica e' stata rifattorizzata in `DtxNodeCheck.Core`; le app desktop
@@ -42,20 +36,19 @@ percorsi usati.
 - `DtxNodeCheck.WorkstationApp`: app Avalonia legacy per nodo Workstation.
 - `DtxNodeCheck.ClientApp`: app Avalonia legacy per nodo Client.
 
-Opzioni:
+Aprire l'app, verificare o selezionare il nodo, quindi premere `Esegui test`.
+`Inventario PC` e' disponibile anche senza selezionare un nodo. Entrambe le
+azioni generano un report HTML e lo aprono automaticamente. La configurazione
+si puo' aprire prima della selezione; `Ricarica config` ripete il rilevamento
+se il nodo non e' ancora selezionato, altrimenti ricarica il piano del nodo.
+La selezione manuale resta valida durante la sessione.
 
-- `--inventory`: crea un inventario read-only del PC per preparare configurazioni.
-- `--config <file>`: file JSON di configurazione, obbligatorio nei controlli nodo.
-- `--node <core|workstation|client>`: nodo da controllare, obbligatorio nei controlli nodo.
-- `--report <file>`: scrive il report nel percorso indicato, opzionale.
-- `--log <file>`: scrive messaggi `INFO`, `DEBUG` ed eccezioni nel percorso indicato, opzionale.
-- `--open-report`: apre il report alla fine dell'esecuzione, richiede `--report`.
-- `--format <text|json|html>`: formato del report, default `text`.
+Su Windows l'eseguibile richiede privilegi amministrativi tramite UAC.
+Su macOS l'interfaccia e' disponibile, ma test e inventario sono disabilitati:
+i controlli DTX richiedono Windows. Le opzioni della CLI storica non sono
+gestite dall'eseguibile desktop.
 
-Su Windows l'eseguibile richiede privilegi amministrativi tramite UAC. Se
-l'app viene eseguita fuori Windows termina con un errore chiaro.
-
-## Pacchetti Installabili Per Nodo
+## Pacchetti Legacy Per Nodo
 
 La cartella `artifacts/node-apps` puo' contenere tre pacchetti separati:
 
@@ -73,7 +66,6 @@ nodo e un installer `Install-DtxNodeCheck-<Nodo>.cmd`. L'installer:
 - crea shortcut su Desktop e Start Menu;
 - lo shortcut apre una finestra unica con log interattivo dei controlli;
 - dalla finestra e' possibile eseguire test o inventario;
-- dalla finestra e' possibile selezionare manualmente il nodo se l'inferenza non e' certa;
 - dalla finestra e' possibile aprire e ricaricare il file JSON di configurazione;
 - dalla finestra e' possibile consultare i dati applicativi tramite `About`;
 - dalla finestra e' possibile aprire fonti ufficiali di supporto e documentazione;
@@ -90,11 +82,7 @@ Le app desktop espongono link manuali verso:
 
 Questi link vengono aperti solo su richiesta dell'utente.
 
-I report HTML vengono generati con:
-
-```powershell
---format html --open-report
-```
+I report HTML vengono generati dai pulsanti `Esegui test` e `Inventario PC`.
 
 ## Installer Windows
 
@@ -107,17 +95,19 @@ Da Windows, con Inno Setup installato:
 packaging\inno\Build-InnoInstallers.cmd
 ```
 
-Lo script pubblica le tre app Avalonia in `Release` e genera:
+Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-artifacts\inno\DtxNodeCheck-Core-Setup.exe
-artifacts\inno\DtxNodeCheck-Workstation-Setup.exe
-artifacts\inno\DtxNodeCheck-Client-Setup.exe
+artifacts\inno\WgoDtxNodeCheck-Setup.exe
 ```
 
-Gli installer installano in `Program Files`, richiedono privilegi admin,
-creano cartelle report/log in `ProgramData`, shortcut Start Menu/Desktop e
-uninstaller Windows standard.
+L'installer installa in `Program Files\WGO DTX Node Check`, richiede privilegi
+admin e crea cartelle report/log in `ProgramData\WGO DTX Node Check`, shortcut
+Start Menu/Desktop e uninstaller Windows standard. Il JSON e' esterno, accanto
+all'eseguibile: un aggiornamento lo conserva, cosi' come la disinstallazione.
+Le precedenti installazioni per nodo restano separate; le loro configurazioni
+personalizzate vanno riportate manualmente nelle sezioni del JSON unificato.
+Gli script `.iss` legacy restano disponibili per compatibilita'.
 
 ## Controlli implementati
 
@@ -132,7 +122,7 @@ configurazioni di sistema. Non risolve hostname e non invia dati in rete.
 
 ## Inventario PC
 
-La modalita' `--inventory` raccoglie dati locali read-only per aiutare a
+Il pulsante `Inventario PC` raccoglie dati locali read-only per aiutare a
 preparare il file JSON di configurazione:
 
 - macchina, utente, sistema operativo e architettura;
@@ -143,11 +133,7 @@ preparare il file JSON di configurazione:
 - programmi installati letti dal registro in sola lettura;
 - directory candidate DTX sotto Program Files e ProgramData.
 
-Esempio consigliato:
-
-```powershell
-DtxNodeCheck.exe --inventory --report .\DTX-Inventory.json --format json --open-report
-```
+Il report viene salvato in `ProgramData\WGO DTX Node Check\Reports\DTX-Inventory.html`.
 
 ## Configurazione
 
@@ -156,6 +142,11 @@ nodo. L'app unica usa `dtx-node-check.json`; le impostazioni `common` vengono
 unite a quelle del nodo selezionato o inferito.
 
 Vedi [examples/dtx-node-check.example.json](examples/dtx-node-check.example.json).
+La configurazione distribuita e' [configs/dtx-node-check.json](configs/dtx-node-check.json).
+E' un punto di partenza: aggiungere controlli specifici dell'installazione.
+Workstation e Client hanno inizialmente segnali simili, quindi il rilevamento
+puo' richiedere la selezione manuale. L'app seleziona automaticamente un nodo
+solo con punteggio almeno 3 e distacco almeno 2 dal secondo candidato.
 
 Schema logico:
 
@@ -192,6 +183,19 @@ Pubblicazione manuale dell'app unica Windows x64:
 
 ```bash
 dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r win-x64
+```
+
+Pubblicazione macOS ARM64 (interfaccia, controlli disponibili solo su Windows):
+
+```bash
+dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r osx-arm64
+```
+
+Verifica delle transizioni UI, senza avviare controlli o aprire report
+(richiede un ambiente desktop):
+
+```bash
+dotnet run --project tests/DtxNodeCheck.Desktop.Smoke
 ```
 
 Pubblicazione manuale delle app legacy per nodo Windows x64:
