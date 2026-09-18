@@ -72,7 +72,7 @@ public sealed class MainWindow : Window
         _status = new TextBlock
         {
             Text = OperatingSystem.IsWindows()
-                ? "Pronto."
+                ? "Seleziona Core, Workstation o Client per eseguire i controlli."
                 : "Controlli disponibili solo su Windows.",
             Margin = new Thickness(0, 14, 0, 8)
         };
@@ -117,13 +117,7 @@ public sealed class MainWindow : Window
         _openConfigButton.Click += (_, _) => OpenConfigFile();
 
         _reloadConfigButton = new Button { Content = "Ricarica config", MinWidth = 120 };
-        _reloadConfigButton.Click += async (_, _) =>
-        {
-            if (_nodeRole is null)
-                await InitializeNodeSelectionAsync();
-            else
-                ReloadPlan();
-        };
+        _reloadConfigButton.Click += (_, _) => ReloadPlan();
 
         _aboutButton = new Button { Content = "About", MinWidth = 96 };
         _aboutButton.Click += async (_, _) => await ShowAboutAsync();
@@ -160,7 +154,7 @@ public sealed class MainWindow : Window
 
         Content = layout;
         UpdateControlsForNode();
-        Opened += async (_, _) => await InitializeNodeSelectionAsync();
+        Opened += (_, _) => { if (_nodeRole is null) RequestNodeSelection(); };
     }
 
     private Control CreateDocumentationLinks()
@@ -204,59 +198,17 @@ public sealed class MainWindow : Window
 
     private void ReloadPlan()
     {
+        if (_nodeRole is null) { RequestNodeSelection(); return; }
         _log.Text = "";
         LoadPlan();
     }
 
-    private async Task InitializeNodeSelectionAsync()
+    private void RequestNodeSelection()
     {
-        if (_nodeRole is null)
-        {
-            var configPath = NodeCheckService.CreateDefaultConfigPath(_configFileName ?? "appsettings.json");
-            SetBusy(true, "Rilevamento nodo in corso...");
-            NodeDetectionResult detection;
-            try
-            {
-                detection = await Task.Run(() => NodeCheckService.DetectNodeRole(configPath));
-            }
-            catch (Exception ex)
-            {
-                AppendLine($"[ERROR] detection - {ex.Message}");
-                _status.Text = "Rilevamento non disponibile. Seleziona il nodo manualmente.";
-                return;
-            }
-            finally
-            {
-                SetBusy(false, _status.Text ?? "Seleziona Core, Workstation o Client.");
-            }
-            AppendLine("Inferenza nodo");
-            AppendLine("==============");
-            AppendLine($"[INFO] detection - {detection.Message}");
-            foreach (var candidate in detection.Candidates)
-            {
-                var reasons = candidate.Reasons.Count == 0 ? "nessun segnale" : string.Join("; ", candidate.Reasons.Take(4));
-                AppendLine($"[INFO] detection - {candidate.Role}: score={candidate.Score}; {reasons}");
-            }
-
-            if (detection.IsConfident && detection.Role is not null)
-            {
-                SetNodeRole(detection.Role.Value, $"Nodo inferito automaticamente: {detection.Role}.", reloadPlan: true);
-                return;
-            }
-
-            _status.Text = "Nodo non inferito. Seleziona Core, Workstation o Client.";
-            UpdateControlsForNode();
-            return;
-        }
-
-        if (_nodeRole is not null)
-        {
-            SetNodeRole(_nodeRole.Value, $"Nodo selezionato: {_nodeRole}.", reloadPlan: true);
-            return;
-        }
-
-        _status.Text = "Seleziona Core, Workstation o Client.";
+        _status.Text = "Seleziona Core, Workstation o Client per eseguire i controlli.";
         UpdateControlsForNode();
+        _nodeSelector.Focus();
+        _nodeSelector.IsDropDownOpen = true;
     }
 
     private void SelectNodeFromUi()
@@ -268,6 +220,13 @@ public sealed class MainWindow : Window
 
         if (_nodeSelector.SelectedIndex < 0 || _nodeSelector.SelectedIndex >= NodeRoles.Length)
         {
+            _nodeRole = null;
+            _paths = null;
+            _lastReportPath = null;
+            _openReportButton.IsEnabled = false;
+            _log.Text = "";
+            UpdateSubtitle();
+            RequestNodeSelection();
             return;
         }
 
@@ -358,6 +317,7 @@ public sealed class MainWindow : Window
         {
             AppendLine("[ERROR] nodo - Nodo non selezionato.");
             SetBusy(false, "Seleziona Core, Workstation o Client.");
+            RequestNodeSelection();
             return;
         }
 
@@ -451,7 +411,11 @@ public sealed class MainWindow : Window
 
     private async Task LoadInventorySettingsAsync()
     {
-        if (_nodeRole is not { } role || _paths is not { } paths) return;
+        if (_nodeRole is not { } role || _paths is not { } paths)
+        {
+            RequestNodeSelection();
+            return;
+        }
         var previousStatus = _status.Text ?? "Pronto.";
         SetBusy(true, "Conferma caricamento impostazioni...");
         try
@@ -619,7 +583,7 @@ public sealed class MainWindow : Window
         builder.AppendLine("Modalita'");
         builder.AppendLine("=========");
         builder.AppendLine("Controlli read-only; DNS/TCP sui target configurati all'avvio dei test, con timeout.");
-        builder.AppendLine("Nessuna richiesta di rete all'avvio dell'app o durante l'inferenza del nodo.");
+        builder.AppendLine("Scelta manuale del nodo. Nessuna richiesta di rete all'avvio dell'app.");
         builder.AppendLine("Il file config viene riletto da disco a ogni esecuzione.");
         return builder.ToString();
     }

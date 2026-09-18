@@ -19,8 +19,13 @@ internal static class Program
         {
             Assert(!Field<Button>(window, "_runButton").IsEnabled, "Tests require a node at startup");
             Assert(!Field<Button>(window, "_inventorySettingsButton").IsEnabled, "Settings import requires selected node");
-            Assert(Field<Button>(window, "_openConfigButton").IsEnabled, "Config accessible before detection");
-            Assert(Field<Button>(window, "_reloadConfigButton").IsEnabled, "Detection can be retried before selection");
+            Assert(Field<ComboBox>(window, "_nodeSelector").SelectedIndex == -1, "No role is automatically selected");
+            Assert(Field<TextBlock>(window, "_status").Text!.Contains("Seleziona"), "Startup requests a role");
+            typeof(MainWindow).GetMethod("ReloadPlan", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
+            Assert(Field<ComboBox>(window, "_nodeSelector").SelectedIndex == -1, "Reload cannot infer a role");
+            Assert(Field<TextBlock>(window, "_status").Text!.Contains("Seleziona"), "Reload requests a role");
+            Assert(Field<Button>(window, "_openConfigButton").IsEnabled, "Config accessible before selection");
+            Assert(Field<Button>(window, "_reloadConfigButton").IsEnabled, "Reload accessible before selection");
             Busy(window, true);
             Assert(!Field<ComboBox>(window, "_nodeSelector").IsEnabled, "Selection locked during work");
             Busy(window, false);
@@ -42,6 +47,12 @@ internal static class Program
                 Assert(Field<Button>(window, "_inventorySettingsButton").IsEnabled, "Settings import available after node selection");
                 Assert(Field<Button>(window, "_runButton").IsEnabled == OperatingSystem.IsWindows(), "Tests enabled for selected role only on Windows");
             }
+            Field<ComboBox>(window, "_nodeSelector").SelectedIndex = -1;
+            Assert(!Field<Button>(window, "_runButton").IsEnabled, "Clearing selection blocks tests");
+            Assert(!Field<Button>(window, "_inventorySettingsButton").IsEnabled, "Clearing selection blocks settings import");
+            Assert(Field<TextBlock>(window, "_status").Text!.Contains("Seleziona"), "Clearing selection requests a new choice");
+            Assert(typeof(MainWindow).GetField("_paths", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window) is null,
+                "Clearing selection discards previous role paths");
         }
         finally { window.Close(); }
 

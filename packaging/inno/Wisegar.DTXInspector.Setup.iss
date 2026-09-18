@@ -1,5 +1,5 @@
 #define AppName "WGO DTX Inspector"
-#define AppVersion "1.0.0"
+#define AppVersion "1.0.2"
 #define SourceDir "..\..\src\Wisegar.DTXInspector.App\bin\Release\net10.0\win-x64\publish"
 
 [Setup]
@@ -45,7 +45,8 @@ Type: files; Name: "{autodesktop}\WGO DTX Node Check.lnk"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Run]
-Filename: "{app}\WgoDtxInspector.exe"; Description: "Avvia {#AppName}"; Flags: nowait postinstall skipifsilent
+; The app requires elevation; default postinstall credentials cause error 740.
+Filename: "{app}\WgoDtxInspector.exe"; Description: "Avvia {#AppName}"; Flags: nowait postinstall skipifsilent runascurrentuser
 
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;

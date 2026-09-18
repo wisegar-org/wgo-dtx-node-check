@@ -2,6 +2,21 @@
 
 ## Continuation on Windows - 2026-09-18
 
+### Manual node selection only
+
+- Removed NodeRoleDetector and detection API/models. No automatic startup inventory
+  or role inference. Startup and reload without a role request a choice in the selector.
+- Tests/settings import require manual selection; clearing it resets role paths and
+  report state. Generic PC inventory remains available without selecting a role.
+
+### Installer 1.0.1: postinstall elevation fix
+
+- User reported CreateProcess error 740 when launching the app at setup completion.
+- Manifest requires administrator; Inno postinstall defaults to original unelevated
+  user. Added runascurrentuser to inherit the elevated installer credentials.
+- Bumped installer version to 1.0.1 to distinguish the corrected package; AppId and
+  existing settings preservation remain unchanged. Silent setup still skips launch.
+
 ### Versioned installer filename
 
 - Output now uses Wisegar.DTXInspector.Setup-{AppVersion}.exe, currently 1.0.0.

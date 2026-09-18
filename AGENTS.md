@@ -7,8 +7,8 @@ read-only validation and inventory of DTX Studio Clinic nodes.
 
 The project started as a replacement for existing PowerShell scripts and evolved
 into an Avalonia UI application. The current preferred direction is a single app
-that can infer the node type locally. If inference is not confident, the user
-selects the node manually.
+with mandatory manual node selection. Never infer or automatically select a role.
+If none is selected, prompt for Core, Workstation or Client before node checks.
 
 Supported node roles:
 
@@ -56,7 +56,7 @@ An elevated tool token is not evidence of the operational user's permissions or
 past installation/update privileges. No automatic system changes.
 User explicitly requires DNS/TCP checks on every requested test run, with timeout:
 use only configured targets, bound each attempt, and never probe at startup,
-during node inference or inventory. Missing targets must produce WARNING.
+during inventory. Missing targets must produce WARNING.
 
 - The app must be read-only by default.
 - It must not modify network, DNS, firewall, services, registry, hosts file, or
@@ -77,9 +77,9 @@ during node inference or inventory. Missing targets must produce WARNING.
 ## Current Architecture
 
 - `Wisegar.DTXInspector.Core`: shared logic for configuration, checks, inventory,
-  reports, node inference, and GUI service facade.
+  reports and GUI service facade.
 - `Wisegar.DTXInspector.App`: the only desktop app, published as
-  `WgoDtxInspector`, with node inference and manual node selection.
+  `WgoDtxInspector`, with mandatory manual node selection.
 - `src/Wisegar.DTXInspector.App/Desktop`: Avalonia window, application and constants.
 - All checks/configuration/inventory/report sources live in `src/Wisegar.DTXInspector.Core`.
 - The former CLI, per-node apps and linked shared-source folders have been removed.
@@ -140,7 +140,7 @@ The preferred future state is a single branded app:
 
 - `WGO DTX Inspector`
 - one unified config file
-- node inference at startup
+- request manual node selection at startup
 - manual override in UI
 - HTML reports opened automatically after test/inventory runs
 - self-contained deploys for Windows x64 only

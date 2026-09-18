@@ -19,11 +19,10 @@ Il solo avvio dell'app non crea report o log.
 ```
 
 `Wisegar.DTXInspector.Core` contiene controlli, inventario e report HTML. L'app unica
-`WGO DTX Inspector` prova a inferire il nodo all'avvio usando solo segnali
-locali read-only. Se il nodo non viene inferito con certezza, l'utente sceglie
-Core, Workstation o Client dalla finestra.
+`WGO DTX Inspector` richiede la scelta manuale di Core, Workstation o Client.
+All'avvio nessun nodo e' selezionato e il menu invita a scegliere.
 Nella finestra desktop e' presente una sezione `Documentazione` con link
-ufficiali apribili manualmente. Avvio, inferenza nodo e inventario non effettuano
+ufficiali apribili manualmente. Avvio e inventario non effettuano
 prove di rete; le prove DNS/TCP partono con `Esegui test`.
 Il JSON include [default DTX documentati per versione](docs/dtx-defaults.md): servizio
 Core, directory dati/installazione, listener Core e IPC locali Clinic. Sono controlli
@@ -38,13 +37,13 @@ percorsi usati.
 ## Progetti
 
 - `Wisegar.DTXInspector.Core`: logica condivisa, configurazione, controlli, inventario e rendering report.
-- `Wisegar.DTXInspector.App`: app Avalonia unica `WGO DTX Inspector` con inferenza nodo.
+- `Wisegar.DTXInspector.App`: app Avalonia unica `WGO DTX Inspector` con scelta manuale del nodo.
 - `tests/Wisegar.DTXInspector.Desktop.Smoke`: verifiche automatiche, non un'app distribuita.
 
 Aprire l'app, verificare o selezionare il nodo, quindi premere `Esegui test`.
 `Inventario PC` e' disponibile anche senza selezionare un nodo. Entrambe le
 azioni generano un report HTML e lo aprono automaticamente. La configurazione
-si puo' aprire prima della selezione; `Ricarica config` ripete il rilevamento
+si puo' aprire prima della selezione; `Ricarica config` chiede di scegliere
 se il nodo non e' ancora selezionato, altrimenti ricarica il piano del nodo.
 La selezione manuale resta valida durante la sessione.
 
@@ -80,7 +79,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-1.0.0.exe
+installers\Wisegar.DTXInspector.Setup-1.0.2.exe
 ```
 
 L'installer installa in `Program Files\WGO DTX Inspector`, richiede privilegi
@@ -135,16 +134,14 @@ Il report viene salvato in `ProgramData\WGO DTX Inspector\Reports\DTX-Inventory.
 
 Un unico file JSON contiene impostazioni comuni e impostazioni specifiche per
 nodo. L'app unica usa `appsettings.json`; le impostazioni `common` vengono
-unite a quelle del nodo selezionato o inferito.
+unite a quelle del nodo selezionato manualmente.
 
 L'unico file da mantenere e' [configs/appsettings.json](configs/appsettings.json),
 copiato accanto all'eseguibile in build e pubblicazione.
 `common` contiene i controlli condivisi; `nodes.core`, `nodes.workstation` e
 `nodes.client` contengono quelli specifici. Cambiare nodo non cambia file.
 E' un punto di partenza: aggiungere controlli specifici dell'installazione.
-Workstation e Client hanno inizialmente segnali simili, quindi il rilevamento
-puo' richiedere la selezione manuale. L'app seleziona automaticamente un nodo
-solo con punteggio almeno 3 e distacco almeno 2 dal secondo candidato.
+Il ruolo viene scelto dall'utente e non viene dedotto dai componenti installati.
 
 Schema logico:
 
