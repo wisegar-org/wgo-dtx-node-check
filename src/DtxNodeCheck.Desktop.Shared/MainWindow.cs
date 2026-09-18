@@ -11,6 +11,14 @@ namespace DtxNodeCheck.Desktop.Shared;
 
 public sealed class MainWindow : Window
 {
+    private static readonly OfficialLink[] OfficialLinks =
+    [
+        new("Supporto", "https://www.dtxstudio.com/en-us/support"),
+        new("DTX Studio Go", "https://www.dtxstudio.com/en-us/dtx-studio-go"),
+        new("Help e IFU", "https://helpfiles.dtxstudio.com/"),
+        new("Installazione", "https://helpfiles.dtxstudio.com/Help/50784413-8047-4699-82f7-d1e9a868909e/4.1/EN/Installation_and_updates.htm")
+    ];
+
     private readonly DtxNodeRole _nodeRole;
     private readonly string _applicationName;
     private readonly NodeCheckPaths _paths;
@@ -20,6 +28,8 @@ public sealed class MainWindow : Window
     private readonly Button _runButton;
     private readonly Button _inventoryButton;
     private readonly Button _openReportButton;
+    private readonly Button _openConfigButton;
+    private readonly Button _reloadConfigButton;
     private string? _lastReportPath;
 
     public MainWindow(DtxNodeRole nodeRole, string applicationName)
@@ -85,17 +95,25 @@ public sealed class MainWindow : Window
         _openReportButton = new Button { Content = "Apri report", MinWidth = 120, IsEnabled = false };
         _openReportButton.Click += (_, _) => OpenLastReport();
 
+        _openConfigButton = new Button { Content = "Apri config", MinWidth = 120 };
+        _openConfigButton.Click += (_, _) => OpenConfigFile();
+
+        _reloadConfigButton = new Button { Content = "Ricarica config", MinWidth = 120 };
+        _reloadConfigButton.Click += (_, _) => ReloadPlan();
+
         var buttons = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
             Margin = new Thickness(0, 12, 0, 12),
-            Children = { _runButton, _inventoryButton, _openReportButton }
+            Children = { _runButton, _inventoryButton, _openReportButton, _openConfigButton, _reloadConfigButton }
         };
+
+        var documentationLinks = CreateDocumentationLinks();
 
         var layout = new Grid
         {
-            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*"),
+            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*"),
             Margin = new Thickness(18)
         };
         layout.Children.Add(new StackPanel { Children = { title, subtitle, _status } });
@@ -103,17 +121,65 @@ public sealed class MainWindow : Window
         layout.Children.Add(_progress);
         Grid.SetRow(buttons, 2);
         layout.Children.Add(buttons);
-        Grid.SetRow(_log, 3);
+        Grid.SetRow(documentationLinks, 3);
+        layout.Children.Add(documentationLinks);
+        Grid.SetRow(_log, 4);
         layout.Children.Add(_log);
 
         Content = layout;
-        Opened += (_, _) => LoadPlan();
+        Opened += (_, _) => ReloadPlan();
+    }
+
+    private Control CreateDocumentationLinks()
+    {
+        var title = new TextBlock
+        {
+            Text = "Documentazione",
+            FontWeight = FontWeight.SemiBold,
+            Margin = new Thickness(0, 0, 12, 0),
+            VerticalAlignment = VerticalAlignment.Center
+        };
+
+        var links = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8
+        };
+
+        foreach (var officialLink in OfficialLinks)
+        {
+            var button = new Button
+            {
+                Content = officialLink.Label,
+                Tag = officialLink.Url,
+                Padding = new Thickness(10, 5),
+                MinWidth = 96
+            };
+            ToolTip.SetTip(button, officialLink.Url);
+            button.Click += (_, _) => OpenOfficialLink(officialLink);
+            links.Children.Add(button);
+        }
+
+        return new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4,
+            Margin = new Thickness(0, 0, 0, 12),
+            Children = { title, links }
+        };
+    }
+
+    private void ReloadPlan()
+    {
+        _log.Text = "";
+        LoadPlan();
     }
 
     private void LoadPlan()
     {
         AppendLine("Piano controlli");
         AppendLine("===============");
+        AppendLine($"[INFO] config - Lettura file: {_paths.ConfigPath}");
 
         if (!OperatingSystem.IsWindows())
         {
@@ -144,6 +210,7 @@ public sealed class MainWindow : Window
         try
         {
             var planned = NodeCheckService.GetPlannedChecks(_paths.ConfigPath, _nodeRole);
+            AppendLine($"[INFO] config - Rilettura file prima dell'esecuzione: {_paths.ConfigPath}");
             _progress.Maximum = Math.Max(planned.Count + 1, 1);
             var index = 0;
             foreach (var item in planned)
@@ -213,7 +280,35 @@ public sealed class MainWindow : Window
     {
         _runButton.IsEnabled = !busy;
         _inventoryButton.IsEnabled = !busy;
+        _openConfigButton.IsEnabled = !busy;
+        _reloadConfigButton.IsEnabled = !busy;
         _status.Text = status;
+    }
+
+    private void OpenConfigFile()
+    {
+        if (!File.Exists(_paths.ConfigPath))
+        {
+            AppendLine($"[ERROR] config - File non trovato: {_paths.ConfigPath}");
+            _status.Text = "File di configurazione non trovato.";
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = _paths.ConfigPath,
+                UseShellExecute = true
+            });
+            AppendLine($"[INFO] config - Apertura file per modifica: {_paths.ConfigPath}");
+            _status.Text = "Config aperta. Usa Ricarica config dopo il salvataggio.";
+        }
+        catch (Exception ex)
+        {
+            AppendLine($"[ERROR] config - Impossibile aprire {_paths.ConfigPath}: {ex.Message}");
+            _status.Text = "Impossibile aprire il file di configurazione.";
+        }
     }
 
     private void OpenLastReport()
@@ -230,6 +325,24 @@ public sealed class MainWindow : Window
         });
     }
 
+    private void OpenOfficialLink(OfficialLink link)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = link.Url,
+                UseShellExecute = true
+            });
+            AppendLine($"[INFO] documentazione - Apertura link: {link.Url}");
+        }
+        catch (Exception ex)
+        {
+            AppendLine($"[ERROR] documentazione - Impossibile aprire {link.Url}: {ex.Message}");
+            _status.Text = "Impossibile aprire il link della documentazione.";
+        }
+    }
+
     private void AppendLine(string line)
     {
         var builder = new StringBuilder(_log.Text ?? "");
@@ -237,4 +350,6 @@ public sealed class MainWindow : Window
         _log.Text = builder.ToString();
         _log.CaretIndex = _log.Text.Length;
     }
+
+    private sealed record OfficialLink(string Label, string Url);
 }

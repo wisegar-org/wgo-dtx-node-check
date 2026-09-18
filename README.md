@@ -23,6 +23,11 @@ DtxNodeCheck.exe --inventory --report .\DTX-Inventory.json --format json --open-
 
 La CLI storica e' stata rifattorizzata in `DtxNodeCheck.Core`; le tre app
 desktop usano la stessa logica condivisa e producono report HTML.
+Nella finestra desktop e' presente una sezione `Documentazione` con link
+ufficiali apribili manualmente; i controlli non accedono alla rete in automatico.
+La configurazione del nodo puo' essere aperta dalla finestra, modificata con
+l'editor associato ai file JSON e ricaricata senza riavviare l'app. Ogni
+esecuzione dei test rilegge comunque il file di configurazione da disco.
 
 ## Progetti
 
@@ -62,7 +67,20 @@ nodo e un installer `Install-DtxNodeCheck-<Nodo>.cmd`. L'installer:
 - crea shortcut su Desktop e Start Menu;
 - lo shortcut apre una finestra unica con log interattivo dei controlli;
 - dalla finestra e' possibile eseguire test o inventario;
+- dalla finestra e' possibile aprire e ricaricare il file JSON di configurazione;
+- dalla finestra e' possibile aprire fonti ufficiali di supporto e documentazione;
 - al termine viene generato un report HTML e aperto automaticamente.
+
+## Fonti Ufficiali
+
+Le app desktop espongono link manuali verso:
+
+- DTX Studio Support: <https://www.dtxstudio.com/en-us/support>
+- DTX Studio Go: <https://www.dtxstudio.com/en-us/dtx-studio-go>
+- Help e IFU: <https://helpfiles.dtxstudio.com/>
+- Installazione e aggiornamenti: <https://helpfiles.dtxstudio.com/Help/50784413-8047-4699-82f7-d1e9a868909e/4.1/EN/Installation_and_updates.htm>
+
+Questi link vengono aperti solo su richiesta dell'utente.
 
 I report HTML vengono generati con:
 
