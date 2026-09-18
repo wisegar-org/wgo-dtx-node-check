@@ -1,0 +1,472 @@
+# codex.mem
+
+This file records the working memory of the conversation for this repository.
+It is intentionally written as an operational memory rather than a polished user
+manual.
+
+## Repository
+
+Path:
+
+```text
+/Users/yariel/Projects/wgo/wgo-dtx-node-check
+```
+
+Project:
+
+```text
+WGO DTX Node Check / DtxNodeCheck
+```
+
+Primary technology:
+
+- .NET 10
+- C#
+- Avalonia UI
+- Windows-first node checks
+- macOS UI/build support for cross-platform testing and packaging
+
+## Original Goal
+
+The user requested a .NET 10 C# console app named `DtxNodeCheck`.
+
+Objective:
+
+- Create a single Windows executable for read-only checks on DTX Studio Clinic
+  nodes: Core, Workstation, and Client.
+- Use one JSON configuration file with common settings and node-specific
+  settings.
+- Replace existing PowerShell scripts.
+
+Initial CLI examples requested:
+
+```bash
+DtxNodeCheck.exe --config .\dtx-studio-heggendorn.json --node workstation
+DtxNodeCheck.exe --config .\dtx-studio-heggendorn.json --node core --report .\DTX-Core-Report.txt
+DtxNodeCheck.exe --config .\dtx-studio-heggendorn.json --node client --report .\DTX-Client-Report.json --format json
+```
+
+Core constraints:
+
+- Read-only by default.
+- Do not modify network, DNS, firewall, services, registry, hosts file, or system
+  configuration.
+- Do not run PowerShell or shell commands from the app.
+- Do not send data over the network.
+- Do not write files except when report/log behavior is explicitly requested.
+- If a report directory is created, it must be because report generation was
+  requested.
+- Must work on Windows.
+- If run outside Windows, exit or show a clear error.
+
+## User Requests And Decisions
+
+1. The user asked to compile a debug version for a test server and save every
+   execution/debug/info message.
+   - Logging support was added.
+   - Debug/info/error style logging became part of the tool direction.
+
+2. The user asked for a double-click command inside a zip, admin access, and
+   opening the report at the end.
+   - Shortcut/installer launcher direction was explored.
+   - VBS was questioned.
+   - The decision moved toward shortcuts/installers instead of VBS.
+
+3. The user asked that the CLI also support PC inventory to help build
+   configuration data.
+   - Inventory mode was added.
+   - Inventory collects read-only local machine data.
+
+4. The user asked to remove all customer/vendor-specific references from code.
+   - References to the original customer and related vendor/client terms were
+     removed from source and generated text.
+   - The app became generic.
+
+5. The user asked for three installable applications, one per node, with their
+   config files, running tests, generating HTML reports, and opening them
+   automatically.
+   - Three desktop apps were created.
+   - Each used a node-specific JSON file.
+   - HTML reports became the normal desktop output.
+
+6. The user asked what cross-platform GUI could be used and required it to be
+   open source.
+   - Avalonia UI was chosen.
+   - Avalonia is open source and cross-platform.
+
+7. The user asked to create four projects:
+   - one core project with shared logic
+   - three executables with one window that interactively shows tests being run
+   - final option to open the HTML report
+   - use Avalonia UI
+
+   Implemented projects:
+
+   - `src/DtxNodeCheck.Core/DtxNodeCheck.Core.csproj`
+   - `src/DtxNodeCheck.CoreApp/DtxNodeCheck.CoreApp.csproj`
+   - `src/DtxNodeCheck.WorkstationApp/DtxNodeCheck.WorkstationApp.csproj`
+   - `src/DtxNodeCheck.ClientApp/DtxNodeCheck.ClientApp.csproj`
+
+   Shared UI:
+
+   - `src/DtxNodeCheck.Desktop.Shared/App.cs`
+   - `src/DtxNodeCheck.Desktop.Shared/AppSettings.cs`
+   - `src/DtxNodeCheck.Desktop.Shared/MainWindow.cs`
+
+8. The user asked for a commit.
+   - Commit created:
+
+```text
+bbd6732 Add Avalonia node check apps
+```
+
+9. The user asked to check open-source installers for Windows packaging.
+   - Inno Setup was evaluated and chosen as a simple open-source Windows
+     installer path.
+
+10. The user asked to implement a simple installer.
+    - Inno Setup packaging was added under `packaging/inno`.
+    - Commit created:
+
+```text
+39f0ec8 Add Inno Setup packaging
+```
+
+11. The user asked to check official DTX documentation about technical
+    requirements and how to read the installed DTX software version.
+    - Official DTX sources were researched by browsing.
+    - Sources identified:
+      - DTX Studio Support: `https://www.dtxstudio.com/en-us/support`
+      - DTX Studio Go: `https://www.dtxstudio.com/en-us/dtx-studio-go`
+      - Help and IFU: `https://helpfiles.dtxstudio.com/`
+      - Installation and updates help:
+        `https://helpfiles.dtxstudio.com/Help/50784413-8047-4699-82f7-d1e9a868909e/4.1/EN/Installation_and_updates.htm`
+      - DTX Studio Care Program:
+        `https://dtxstudio.com/en-us/dtx-studio-care-program`
+      - Older public system requirements / manual PDF:
+        `https://ifu.dtxstudio.com/wp-content/uploads/2022/05/CG_DTX_Studio_Clinic_3.1_EN.pdf`
+    - Conclusion:
+      - official sites exist
+      - current exact requirements may be behind DTX Studio Go or documentation
+        library access
+      - no automatic network access should be added to checks
+      - add manual official links in UI instead
+
+12. The user approved adding a "Fonti ufficiali" / "Documentazione" section.
+    - Added documentation links in the shared Avalonia window.
+    - Links open only on explicit user click.
+    - README updated.
+
+13. The user asked to open/edit/reload the configuration file and ensure every
+    execution rereads the file.
+    - Added `Apri config`.
+    - Added `Ricarica config`.
+    - Every test execution rereads JSON from disk.
+    - README updated.
+
+14. The user asked for a commit and deploy for Windows and Mac.
+    - Commit created:
+
+```text
+1676a10 Add config reload and documentation links
+```
+
+    - Published Windows x64 and macOS ARM64 builds for the three node apps.
+    - Created macOS `.app` bundles and zip packages.
+    - macOS bundles were signed ad-hoc.
+
+15. The user clarified that publish must be self-contained.
+    - `.csproj` files were updated:
+      - `SelfContained=true` when RuntimeIdentifier is provided
+      - `PublishSingleFile=true`
+      - `IncludeNativeLibrariesForSelfExtract=true`
+      - JSON config files copied to publish directory
+    - README updated.
+    - Commit created:
+
+```text
+f303d2c Enforce self-contained desktop publish
+```
+
+16. The user clarified that deploy must always be self-contained.
+    - Added `Directory.Build.targets`.
+    - Desktop publish now fails if no Runtime Identifier is supplied.
+    - Desktop publish now fails if `SelfContained` is not true.
+    - `.gitignore` updated to ignore generated deploy artifacts.
+    - Commit created:
+
+```text
+6073c5b Require self-contained desktop deploys
+```
+
+17. The user asked to customize the About dialog with app data.
+    - Added `About` button.
+    - About shows:
+      - app name
+      - node
+      - version
+      - assembly
+      - base directory
+      - OS
+      - Windows yes/no
+      - process architecture
+      - OS architecture
+      - likely self-contained status
+      - config/report/log paths
+      - read-only/no automatic network/reload config notes
+    - README updated.
+
+18. The user asked to remove `.NET runtime` from About.
+    - Removed `.NET: {Environment.Version}` from About.
+    - README wording changed from "runtime" to "ambiente".
+
+19. The user asked for proposed app names.
+    - Suggested:
+      - `DTX Core Check`
+      - `DTX Workstation Check`
+      - `DTX Client Check`
+    - Then user asked to include WGO.
+    - Recommended:
+      - `WGO DTX Core Check`
+      - `WGO DTX Workstation Check`
+      - `WGO DTX Client Check`
+
+20. The user asked to evaluate using a single app that infers the node and asks
+    if inference fails.
+    - Feasible.
+    - Recommended a single app:
+
+```text
+WGO DTX Node Check
+```
+
+    - Inference should be local/read-only:
+      - services
+      - processes
+      - installed programs via registry read-only
+      - local TCP listeners via .NET API
+      - configured files/directories
+      - optional machine name signal, not decisive
+    - If inference is ambiguous, ask the user to select Core/Workstation/Client.
+
+21. The user approved proceeding with the single app.
+    - Added new preferred app project:
+
+```text
+src/DtxNodeCheck.App/DtxNodeCheck.App.csproj
+src/DtxNodeCheck.App/Program.cs
+```
+
+    - App name:
+
+```text
+WGO DTX Node Check
+```
+
+    - Assembly name:
+
+```text
+WgoDtxNodeCheck
+```
+
+    - Added unified config:
+
+```text
+configs/dtx-node-check.json
+```
+
+    - Added node inference service:
+
+```text
+src/DtxNodeCheck.Core/NodeRoleDetector.cs
+```
+
+    - Added public detection facade in:
+
+```text
+src/DtxNodeCheck.Core/NodeCheckService.cs
+```
+
+    - Updated shared UI:
+      - node selector combo box
+      - automatic inference on startup when app has no fixed node
+      - manual selection if inference not confident
+      - paths update when node changes
+      - plan reloads after node selection
+      - checks require selected node
+      - inventory can still run even before selecting a node, using default
+        report/log path fallback
+
+    - Updated `AppSettings`:
+      - nullable `NodeRole`
+      - `InferNodeRole`
+      - `ConfigFileName`
+
+    - Updated `App.cs` to pass all app settings to `MainWindow`.
+    - Added `DtxNodeCheck.App` to `DtxNodeCheck.sln`.
+    - Updated `Directory.Build.targets` so the new app is also governed by
+      self-contained deploy enforcement.
+    - Updated README to describe the single app as preferred and the three node
+      apps as legacy compatibility apps.
+
+    Verification:
+      - `dotnet build DtxNodeCheck.sln`: passed with 0 warnings/errors
+      - publish without RID for new app: intentionally blocked
+      - publish Windows x64 for new app: succeeded
+      - publish macOS ARM64 for new app: succeeded
+
+    Test publish outputs:
+
+```text
+/private/tmp/wgo-dtx-node-check-win-x64/WgoDtxNodeCheck.exe
+/private/tmp/wgo-dtx-node-check-win-x64/dtx-node-check.json
+/private/tmp/wgo-dtx-node-check-osx-arm64/WgoDtxNodeCheck
+/private/tmp/wgo-dtx-node-check-osx-arm64/dtx-node-check.json
+```
+
+22. The user asked to add this file and `AGENTS.md`.
+    - `AGENTS.md` added with project description, constraints, architecture,
+      build/publish instructions, and engineering notes.
+    - `codex.mem` added with conversation/project memory.
+
+## Important Commits
+
+```text
+bbd6732 Add Avalonia node check apps
+39f0ec8 Add Inno Setup packaging
+1676a10 Add config reload and documentation links
+f303d2c Enforce self-contained desktop publish
+6073c5b Require self-contained desktop deploys
+```
+
+Recent uncommitted work at the time this memory file was created:
+
+- unified app project `DtxNodeCheck.App`
+- unified config `configs/dtx-node-check.json`
+- node inference service `NodeRoleDetector`
+- shared UI changes for node inference/manual selection
+- README updates for the unified app
+- About dialog changes from previous request may also be uncommitted depending
+  on whether a commit is made after this file
+
+## Current Design Details
+
+Preferred app:
+
+```text
+WGO DTX Node Check
+```
+
+Preferred config:
+
+```text
+dtx-node-check.json
+```
+
+Node inference:
+
+- Uses local read-only signals only.
+- Scores each node role.
+- If best score is high enough and sufficiently better than the next score,
+  selects node automatically.
+- Otherwise leaves node unset and asks the user to select it in the UI.
+
+Current detection threshold:
+
+- best score must be at least 3
+- best score must exceed second score by at least 2
+
+Detection signals:
+
+- configured required directories
+- configured required files
+- configured required processes
+- configured required services
+- configured required TCP listeners
+- general DTX process/program/service presence
+
+Known limitation:
+
+- With the current sample config, Workstation and Client are very similar.
+  Real deployments should enrich `dtx-node-check.json` with node-specific
+  services, files, directories, or ports to improve automatic inference.
+
+## Read-Only Safety Notes
+
+Allowed:
+
+- read local filesystem metadata
+- check file/directory existence
+- read process list
+- query services read-only
+- read local TCP listeners
+- read installed programs from registry read-only
+- write report/log when the desktop workflow produces report/log output
+- open report file after run
+- open config file when user clicks `Apri config`
+- open official documentation links only when user clicks them
+
+Not allowed:
+
+- modify registry
+- modify services
+- change firewall
+- change DNS
+- change hosts file
+- change network
+- run PowerShell
+- run shell commands from the app
+- send automatic network traffic
+
+## Packaging Notes
+
+Self-contained deployment is mandatory for desktop projects.
+
+`Directory.Build.targets` blocks:
+
+- desktop publish without Runtime Identifier
+- desktop publish with `SelfContained` not equal to `true`
+
+Generated deploy folders are ignored by git:
+
+```text
+artifacts/deploy/
+artifacts/deploy-self-contained/
+artifacts/inno/
+```
+
+Previously generated self-contained packages were created under:
+
+```text
+artifacts/deploy-self-contained/packages/
+```
+
+Current preferred publishing commands:
+
+```bash
+dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r win-x64
+dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r osx-arm64
+```
+
+## Official DTX Links Added To UI
+
+These links are shown in the `Documentazione` section and open only on click:
+
+```text
+https://www.dtxstudio.com/en-us/support
+https://www.dtxstudio.com/en-us/dtx-studio-go
+https://helpfiles.dtxstudio.com/
+https://helpfiles.dtxstudio.com/Help/50784413-8047-4699-82f7-d1e9a868909e/4.1/EN/Installation_and_updates.htm
+```
+
+## Current Worktree Reminder
+
+Before making future changes, run:
+
+```bash
+git status --short
+```
+
+At the moment these files were created, there were uncommitted changes for the
+single-app/node-inference work plus these two memory/instruction files.
+

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Text;
 using Avalonia;
 using Avalonia.Controls;
@@ -11,6 +12,13 @@ namespace DtxNodeCheck.Desktop.Shared;
 
 public sealed class MainWindow : Window
 {
+    private static readonly DtxNodeRole[] NodeRoles =
+    [
+        DtxNodeRole.Core,
+        DtxNodeRole.Workstation,
+        DtxNodeRole.Client
+    ];
+
     private static readonly OfficialLink[] OfficialLinks =
     [
         new("Supporto", "https://www.dtxstudio.com/en-us/support"),
@@ -19,24 +27,35 @@ public sealed class MainWindow : Window
         new("Installazione", "https://helpfiles.dtxstudio.com/Help/50784413-8047-4699-82f7-d1e9a868909e/4.1/EN/Installation_and_updates.htm")
     ];
 
-    private readonly DtxNodeRole _nodeRole;
     private readonly string _applicationName;
-    private readonly NodeCheckPaths _paths;
+    private readonly string? _configFileName;
+    private readonly bool _inferNodeRole;
+    private DtxNodeRole? _nodeRole;
+    private NodeCheckPaths? _paths;
+    private readonly TextBlock _subtitle;
     private readonly TextBlock _status;
     private readonly TextBox _log;
     private readonly ProgressBar _progress;
+    private readonly ComboBox _nodeSelector;
     private readonly Button _runButton;
     private readonly Button _inventoryButton;
     private readonly Button _openReportButton;
     private readonly Button _openConfigButton;
     private readonly Button _reloadConfigButton;
+    private readonly Button _aboutButton;
     private string? _lastReportPath;
+    private bool _updatingNodeSelector;
 
-    public MainWindow(DtxNodeRole nodeRole, string applicationName)
+    public MainWindow(DtxNodeRole? nodeRole, string applicationName, string? configFileName, bool inferNodeRole)
     {
         _nodeRole = nodeRole;
         _applicationName = applicationName;
-        _paths = NodeCheckService.CreateDefaultPaths(nodeRole, applicationName);
+        _configFileName = configFileName;
+        _inferNodeRole = inferNodeRole;
+        if (_nodeRole is not null)
+        {
+            _paths = NodeCheckService.CreateDefaultPaths(_nodeRole.Value, _applicationName, _configFileName);
+        }
 
         Title = applicationName;
         Width = 980;
@@ -52,12 +71,12 @@ public sealed class MainWindow : Window
             Margin = new Thickness(0, 0, 0, 4)
         };
 
-        var subtitle = new TextBlock
+        _subtitle = new TextBlock
         {
-            Text = $"Nodo: {_nodeRole}  |  Config: {_paths.ConfigPath}",
             Foreground = Brushes.DimGray,
             TextWrapping = TextWrapping.Wrap
         };
+        UpdateSubtitle();
 
         _status = new TextBlock
         {
@@ -86,6 +105,14 @@ public sealed class MainWindow : Window
         ScrollViewer.SetVerticalScrollBarVisibility(_log, ScrollBarVisibility.Auto);
         ScrollViewer.SetHorizontalScrollBarVisibility(_log, ScrollBarVisibility.Auto);
 
+        _nodeSelector = new ComboBox
+        {
+            MinWidth = 170,
+            ItemsSource = NodeRoles.Select(role => role.ToString()).ToArray(),
+            PlaceholderText = "Seleziona nodo"
+        };
+        _nodeSelector.SelectionChanged += (_, _) => SelectNodeFromUi();
+
         _runButton = new Button { Content = "Esegui test", MinWidth = 120 };
         _runButton.Click += async (_, _) => await RunChecksAsync();
 
@@ -101,12 +128,15 @@ public sealed class MainWindow : Window
         _reloadConfigButton = new Button { Content = "Ricarica config", MinWidth = 120 };
         _reloadConfigButton.Click += (_, _) => ReloadPlan();
 
+        _aboutButton = new Button { Content = "About", MinWidth = 96 };
+        _aboutButton.Click += async (_, _) => await ShowAboutAsync();
+
         var buttons = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
             Margin = new Thickness(0, 12, 0, 12),
-            Children = { _runButton, _inventoryButton, _openReportButton, _openConfigButton, _reloadConfigButton }
+            Children = { _nodeSelector, _runButton, _inventoryButton, _openReportButton, _openConfigButton, _reloadConfigButton, _aboutButton }
         };
 
         var documentationLinks = CreateDocumentationLinks();
@@ -116,7 +146,7 @@ public sealed class MainWindow : Window
             RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*"),
             Margin = new Thickness(18)
         };
-        layout.Children.Add(new StackPanel { Children = { title, subtitle, _status } });
+        layout.Children.Add(new StackPanel { Children = { title, _subtitle, _status } });
         Grid.SetRow(_progress, 1);
         layout.Children.Add(_progress);
         Grid.SetRow(buttons, 2);
@@ -127,7 +157,7 @@ public sealed class MainWindow : Window
         layout.Children.Add(_log);
 
         Content = layout;
-        Opened += (_, _) => ReloadPlan();
+        Opened += (_, _) => InitializeNodeSelection();
     }
 
     private Control CreateDocumentationLinks()
@@ -175,10 +205,111 @@ public sealed class MainWindow : Window
         LoadPlan();
     }
 
+    private void InitializeNodeSelection()
+    {
+        if (_nodeRole is null && _inferNodeRole)
+        {
+            var configPath = NodeCheckService.CreateDefaultConfigPath(_configFileName ?? "dtx-node-check.json");
+            var detection = NodeCheckService.DetectNodeRole(configPath);
+            AppendLine("Inferenza nodo");
+            AppendLine("==============");
+            AppendLine($"[INFO] detection - {detection.Message}");
+            foreach (var candidate in detection.Candidates)
+            {
+                var reasons = candidate.Reasons.Count == 0 ? "nessun segnale" : string.Join("; ", candidate.Reasons.Take(4));
+                AppendLine($"[INFO] detection - {candidate.Role}: score={candidate.Score}; {reasons}");
+            }
+
+            if (detection.IsConfident && detection.Role is not null)
+            {
+                SetNodeRole(detection.Role.Value, $"Nodo inferito automaticamente: {detection.Role}.", reloadPlan: true);
+                return;
+            }
+
+            _status.Text = "Nodo non inferito. Seleziona Core, Workstation o Client.";
+            UpdateControlsForNode();
+            return;
+        }
+
+        if (_nodeRole is not null)
+        {
+            SetNodeRole(_nodeRole.Value, $"Nodo selezionato: {_nodeRole}.", reloadPlan: true);
+            return;
+        }
+
+        _status.Text = "Seleziona Core, Workstation o Client.";
+        UpdateControlsForNode();
+    }
+
+    private void SelectNodeFromUi()
+    {
+        if (_updatingNodeSelector)
+        {
+            return;
+        }
+
+        if (_nodeSelector.SelectedIndex < 0 || _nodeSelector.SelectedIndex >= NodeRoles.Length)
+        {
+            return;
+        }
+
+        SetNodeRole(NodeRoles[_nodeSelector.SelectedIndex], $"Nodo selezionato manualmente: {NodeRoles[_nodeSelector.SelectedIndex]}.", reloadPlan: true);
+    }
+
+    private void SetNodeRole(DtxNodeRole role, string status, bool reloadPlan)
+    {
+        _nodeRole = role;
+        _paths = NodeCheckService.CreateDefaultPaths(role, _applicationName, _configFileName);
+        _lastReportPath = null;
+        _openReportButton.IsEnabled = false;
+        var index = Array.IndexOf(NodeRoles, role);
+        if (_nodeSelector.SelectedIndex != index)
+        {
+            _updatingNodeSelector = true;
+            try
+            {
+                _nodeSelector.SelectedIndex = index;
+            }
+            finally
+            {
+                _updatingNodeSelector = false;
+            }
+        }
+
+        UpdateSubtitle();
+        UpdateControlsForNode();
+        _status.Text = status;
+        if (reloadPlan)
+        {
+            ReloadPlan();
+        }
+    }
+
+    private void UpdateSubtitle()
+    {
+        var node = _nodeRole?.ToString() ?? "da selezionare";
+        var config = _paths?.ConfigPath ?? NodeCheckService.CreateDefaultConfigPath(_configFileName ?? "dtx-node-check.json");
+        _subtitle.Text = $"Nodo: {node}  |  Config: {config}";
+    }
+
+    private void UpdateControlsForNode()
+    {
+        var hasNode = _nodeRole is not null && _paths is not null;
+        _runButton.IsEnabled = hasNode;
+        _openConfigButton.IsEnabled = hasNode;
+        _reloadConfigButton.IsEnabled = hasNode;
+    }
+
     private void LoadPlan()
     {
         AppendLine("Piano controlli");
         AppendLine("===============");
+        if (_nodeRole is null || _paths is null)
+        {
+            AppendLine("[INFO] nodo - Seleziona un nodo per caricare il piano controlli.");
+            return;
+        }
+
         AppendLine($"[INFO] config - Lettura file: {_paths.ConfigPath}");
 
         if (!OperatingSystem.IsWindows())
@@ -189,7 +320,7 @@ public sealed class MainWindow : Window
 
         try
         {
-            foreach (var item in NodeCheckService.GetPlannedChecks(_paths.ConfigPath, _nodeRole))
+            foreach (var item in NodeCheckService.GetPlannedChecks(_paths.ConfigPath, _nodeRole.Value))
             {
                 AppendLine($"[PENDING] {item.Category} - {item.Name}: {item.Message}");
             }
@@ -203,13 +334,20 @@ public sealed class MainWindow : Window
     private async Task RunChecksAsync()
     {
         SetBusy(true, "Esecuzione controlli...");
+        if (_nodeRole is null || _paths is null)
+        {
+            AppendLine("[ERROR] nodo - Nodo non selezionato.");
+            SetBusy(false, "Seleziona Core, Workstation o Client.");
+            return;
+        }
+
         _progress.Value = 0;
         _lastReportPath = _paths.ReportPath;
         _openReportButton.IsEnabled = false;
 
         try
         {
-            var planned = NodeCheckService.GetPlannedChecks(_paths.ConfigPath, _nodeRole);
+            var planned = NodeCheckService.GetPlannedChecks(_paths.ConfigPath, _nodeRole.Value);
             AppendLine($"[INFO] config - Rilettura file prima dell'esecuzione: {_paths.ConfigPath}");
             _progress.Maximum = Math.Max(planned.Count + 1, 1);
             var index = 0;
@@ -220,7 +358,7 @@ public sealed class MainWindow : Window
                 await Task.Delay(60);
             }
 
-            var result = await Task.Run(() => NodeCheckService.RunCheck(_paths.ConfigPath, _nodeRole, _paths.ReportPath, _paths.LogPath, openReport: true));
+            var result = await Task.Run(() => NodeCheckService.RunCheck(_paths.ConfigPath, _nodeRole.Value, _paths.ReportPath, _paths.LogPath, openReport: true));
             _progress.Value = _progress.Maximum;
             AppendLine("");
             AppendLine("Risultati");
@@ -250,13 +388,14 @@ public sealed class MainWindow : Window
     private async Task RunInventoryAsync()
     {
         SetBusy(true, "Esecuzione inventario...");
+        var paths = _paths ?? NodeCheckService.CreateDefaultPaths(DtxNodeRole.Client, _applicationName, _configFileName);
         _progress.Maximum = 1;
         _progress.Value = 0;
 
         try
         {
-            var reportPath = Path.Combine(Path.GetDirectoryName(_paths.ReportPath) ?? AppContext.BaseDirectory, "DTX-Inventory.html");
-            var logPath = Path.Combine(Path.GetDirectoryName(_paths.LogPath) ?? AppContext.BaseDirectory, "DtxNodeCheck-Inventory-debug.log");
+            var reportPath = Path.Combine(Path.GetDirectoryName(paths.ReportPath) ?? AppContext.BaseDirectory, "DTX-Inventory.html");
+            var logPath = Path.Combine(Path.GetDirectoryName(paths.LogPath) ?? AppContext.BaseDirectory, "DtxNodeCheck-Inventory-debug.log");
             AppendLine("[RUNNING] inventory - PC Inventory");
             var result = await Task.Run(() => NodeCheckService.RunInventory(reportPath, logPath, openReport: true));
             _progress.Value = 1;
@@ -280,13 +419,130 @@ public sealed class MainWindow : Window
     {
         _runButton.IsEnabled = !busy;
         _inventoryButton.IsEnabled = !busy;
-        _openConfigButton.IsEnabled = !busy;
-        _reloadConfigButton.IsEnabled = !busy;
+        _nodeSelector.IsEnabled = !busy;
+        _openConfigButton.IsEnabled = !busy && _paths is not null;
+        _reloadConfigButton.IsEnabled = !busy && _paths is not null;
+        _aboutButton.IsEnabled = !busy;
         _status.Text = status;
+    }
+
+    private async Task ShowAboutAsync()
+    {
+        var assembly = typeof(MainWindow).Assembly;
+        var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? assembly.GetName().Version?.ToString()
+            ?? "n/a";
+
+        var dialog = new Window
+        {
+            Title = $"About {_applicationName}",
+            Width = 620,
+            Height = 520,
+            MinWidth = 520,
+            MinHeight = 420,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = true
+        };
+
+        var heading = new TextBlock
+        {
+            Text = _applicationName,
+            FontSize = 22,
+            FontWeight = FontWeight.SemiBold,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+
+        var description = new TextBlock
+        {
+            Text = "DTX Node Check desktop app",
+            Foreground = Brushes.DimGray,
+            Margin = new Thickness(0, 0, 0, 14)
+        };
+
+        var details = new TextBox
+        {
+            IsReadOnly = true,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = FontFamily.Parse("Consolas, Menlo, monospace"),
+            Text = BuildAboutText(version)
+        };
+        ScrollViewer.SetVerticalScrollBarVisibility(details, ScrollBarVisibility.Auto);
+        ScrollViewer.SetHorizontalScrollBarVisibility(details, ScrollBarVisibility.Disabled);
+
+        var closeButton = new Button
+        {
+            Content = "Chiudi",
+            MinWidth = 96,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Margin = new Thickness(0, 12, 0, 0)
+        };
+        closeButton.Click += (_, _) => dialog.Close();
+
+        var layout = new Grid
+        {
+            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
+            Margin = new Thickness(18)
+        };
+
+        layout.Children.Add(new StackPanel { Children = { heading, description } });
+        Grid.SetRow(details, 1);
+        layout.Children.Add(details);
+        Grid.SetRow(closeButton, 2);
+        layout.Children.Add(closeButton);
+
+        dialog.Content = layout;
+        await dialog.ShowDialog(this);
+    }
+
+    private string BuildAboutText(string version)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("Applicazione");
+        builder.AppendLine("============");
+        builder.AppendLine($"Nome: {_applicationName}");
+        builder.AppendLine($"Nodo: {_nodeRole?.ToString() ?? "da selezionare"}");
+        builder.AppendLine($"Versione: {version}");
+        builder.AppendLine($"Assembly: {typeof(MainWindow).Assembly.GetName().Name}");
+        builder.AppendLine($"Base directory: {AppContext.BaseDirectory}");
+        builder.AppendLine();
+        builder.AppendLine("Runtime");
+        builder.AppendLine("=======");
+        builder.AppendLine($"OS: {Environment.OSVersion}");
+        builder.AppendLine($"Windows: {(OperatingSystem.IsWindows() ? "si" : "no")}");
+        builder.AppendLine($"Architettura processo: {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}");
+        builder.AppendLine($"Architettura OS: {System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}");
+        builder.AppendLine($"Self-contained: {IsLikelySelfContained()}");
+        builder.AppendLine();
+        builder.AppendLine("Percorsi");
+        builder.AppendLine("========");
+        builder.AppendLine($"Config: {_paths?.ConfigPath ?? NodeCheckService.CreateDefaultConfigPath(_configFileName ?? "dtx-node-check.json")}");
+        builder.AppendLine($"Report: {_paths?.ReportPath ?? "n/a"}");
+        builder.AppendLine($"Log: {_paths?.LogPath ?? "n/a"}");
+        builder.AppendLine();
+        builder.AppendLine("Modalita'");
+        builder.AppendLine("=========");
+        builder.AppendLine("Controlli locali read-only.");
+        builder.AppendLine("Nessun accesso rete automatico.");
+        builder.AppendLine("Il file config viene riletto da disco a ogni esecuzione.");
+        return builder.ToString();
+    }
+
+    private static string IsLikelySelfContained()
+    {
+        var runtimeConfigPath = Path.ChangeExtension(Environment.ProcessPath, ".runtimeconfig.json");
+        return File.Exists(runtimeConfigPath) ? "no" : "si";
     }
 
     private void OpenConfigFile()
     {
+        if (_paths is null)
+        {
+            AppendLine("[ERROR] config - Nodo non selezionato.");
+            _status.Text = "Seleziona un nodo prima di aprire la config.";
+            return;
+        }
+
         if (!File.Exists(_paths.ConfigPath))
         {
             AppendLine($"[ERROR] config - File non trovato: {_paths.ConfigPath}");

@@ -30,9 +30,20 @@ public sealed record NodeCheckExecutionResult(
     string RenderedReport,
     IReadOnlyList<NodeCheckItem> Items);
 
+public sealed record NodeDetectionCandidate(
+    DtxNodeRole Role,
+    int Score,
+    IReadOnlyList<string> Reasons);
+
+public sealed record NodeDetectionResult(
+    DtxNodeRole? Role,
+    bool IsConfident,
+    string Message,
+    IReadOnlyList<NodeDetectionCandidate> Candidates);
+
 public static class NodeCheckService
 {
-    public static NodeCheckPaths CreateDefaultPaths(DtxNodeRole role, string applicationName)
+    public static NodeCheckPaths CreateDefaultPaths(DtxNodeRole role, string applicationName, string? configFileName = null)
     {
         var node = role.ToString().ToLowerInvariant();
         var baseDir = AppContext.BaseDirectory;
@@ -41,9 +52,41 @@ public static class NodeCheckService
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), applicationName);
 
         return new NodeCheckPaths(
-            Path.Combine(baseDir, $"dtx-node-check-{node}.json"),
+            Path.Combine(baseDir, configFileName ?? $"dtx-node-check-{node}.json"),
             Path.Combine(dataRoot, "Reports", $"DTX-{node}-Report.html"),
             Path.Combine(dataRoot, "Logs", $"DtxNodeCheck-{node}-debug.log"));
+    }
+
+    public static string CreateDefaultConfigPath(string configFileName) =>
+        Path.Combine(AppContext.BaseDirectory, configFileName);
+
+    public static NodeDetectionResult DetectNodeRole(string configPath)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return new NodeDetectionResult(
+                null,
+                false,
+                "Inferenza nodo disponibile solo su Windows.",
+                []);
+        }
+
+        var candidates = NodeRoleDetector.Detect(configPath)
+            .OrderByDescending(candidate => candidate.Score)
+            .ThenBy(candidate => candidate.Role.ToString(), StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (candidates.Length == 0)
+        {
+            return new NodeDetectionResult(null, false, "Nessun segnale locale sufficiente per inferire il nodo.", []);
+        }
+
+        var best = candidates[0];
+        var second = candidates.Length > 1 ? candidates[1] : null;
+        var confident = best.Score >= 3 && (second is null || best.Score - second.Score >= 2);
+        return confident
+            ? new NodeDetectionResult(best.Role, true, $"Nodo inferito: {best.Role}.", candidates)
+            : new NodeDetectionResult(null, false, "Nodo non inferito con certezza. Seleziona il nodo manualmente.", candidates);
     }
 
     public static IReadOnlyList<NodeCheckItem> GetPlannedChecks(string configPath, DtxNodeRole role)

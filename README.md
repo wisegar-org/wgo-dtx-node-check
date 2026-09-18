@@ -1,8 +1,8 @@
 # DtxNodeCheck
 
 App .NET 10 in C# per controlli read-only sui nodi DTX Studio Clinic:
-Core, Workstation e Client. La soluzione contiene una libreria condivisa e tre
-app desktop Avalonia UI, una per nodo.
+Core, Workstation e Client. La soluzione contiene una libreria condivisa, una
+app desktop Avalonia UI unica e tre app desktop legacy, una per nodo.
 
 L'app sostituisce gli script PowerShell esistenti senza eseguire PowerShell,
 comandi shell o chiamate di rete durante i controlli. I controlli sono locali e in sola lettura.
@@ -21,20 +21,26 @@ DtxNodeCheck.exe --config .\dtx-node-check.json --node core --report .\DTX-Core-
 DtxNodeCheck.exe --inventory --report .\DTX-Inventory.json --format json --open-report
 ```
 
-La CLI storica e' stata rifattorizzata in `DtxNodeCheck.Core`; le tre app
-desktop usano la stessa logica condivisa e producono report HTML.
+La CLI storica e' stata rifattorizzata in `DtxNodeCheck.Core`; le app desktop
+usano la stessa logica condivisa e producono report HTML. L'app unica
+`WGO DTX Node Check` prova a inferire il nodo all'avvio usando solo segnali
+locali read-only. Se il nodo non viene inferito con certezza, l'utente sceglie
+Core, Workstation o Client dalla finestra.
 Nella finestra desktop e' presente una sezione `Documentazione` con link
 ufficiali apribili manualmente; i controlli non accedono alla rete in automatico.
 La configurazione del nodo puo' essere aperta dalla finestra, modificata con
 l'editor associato ai file JSON e ricaricata senza riavviare l'app. Ogni
 esecuzione dei test rilegge comunque il file di configurazione da disco.
+La finestra include anche un `About` con dati app, nodo, versione, ambiente e
+percorsi usati.
 
 ## Progetti
 
 - `DtxNodeCheck.Core`: logica condivisa, configurazione, controlli, inventario e rendering report.
-- `DtxNodeCheck.CoreApp`: app Avalonia per nodo Core.
-- `DtxNodeCheck.WorkstationApp`: app Avalonia per nodo Workstation.
-- `DtxNodeCheck.ClientApp`: app Avalonia per nodo Client.
+- `DtxNodeCheck.App`: app Avalonia unica `WGO DTX Node Check` con inferenza nodo.
+- `DtxNodeCheck.CoreApp`: app Avalonia legacy per nodo Core.
+- `DtxNodeCheck.WorkstationApp`: app Avalonia legacy per nodo Workstation.
+- `DtxNodeCheck.ClientApp`: app Avalonia legacy per nodo Client.
 
 Opzioni:
 
@@ -67,7 +73,9 @@ nodo e un installer `Install-DtxNodeCheck-<Nodo>.cmd`. L'installer:
 - crea shortcut su Desktop e Start Menu;
 - lo shortcut apre una finestra unica con log interattivo dei controlli;
 - dalla finestra e' possibile eseguire test o inventario;
+- dalla finestra e' possibile selezionare manualmente il nodo se l'inferenza non e' certa;
 - dalla finestra e' possibile aprire e ricaricare il file JSON di configurazione;
+- dalla finestra e' possibile consultare i dati applicativi tramite `About`;
 - dalla finestra e' possibile aprire fonti ufficiali di supporto e documentazione;
 - al termine viene generato un report HTML e aperto automaticamente.
 
@@ -144,7 +152,8 @@ DtxNodeCheck.exe --inventory --report .\DTX-Inventory.json --format json --open-
 ## Configurazione
 
 Un unico file JSON contiene impostazioni comuni e impostazioni specifiche per
-nodo. Le impostazioni `common` vengono unite a quelle del nodo selezionato.
+nodo. L'app unica usa `dtx-node-check.json`; le impostazioni `common` vengono
+unite a quelle del nodo selezionato o inferito.
 
 Vedi [examples/dtx-node-check.example.json](examples/dtx-node-check.example.json).
 
@@ -179,7 +188,13 @@ Build locale:
 dotnet build
 ```
 
-Pubblicazione manuale delle tre app Windows x64:
+Pubblicazione manuale dell'app unica Windows x64:
+
+```bash
+dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r win-x64
+```
+
+Pubblicazione manuale delle app legacy per nodo Windows x64:
 
 ```bash
 dotnet publish src/DtxNodeCheck.CoreApp/DtxNodeCheck.CoreApp.csproj -c Release -r win-x64
@@ -187,15 +202,14 @@ dotnet publish src/DtxNodeCheck.WorkstationApp/DtxNodeCheck.WorkstationApp.cspro
 dotnet publish src/DtxNodeCheck.ClientApp/DtxNodeCheck.ClientApp.csproj -c Release -r win-x64
 ```
 
-Quando viene indicato un Runtime Identifier, i tre progetti desktop pubblicano
-sempre output self-contained e single-file.
+Quando viene indicato un Runtime Identifier, tutti i progetti desktop pubblicano
+sempre output self-contained e single-file. Un publish desktop senza Runtime
+Identifier viene bloccato.
 
 Gli eseguibili vengono generati sotto:
 
 ```text
-src/DtxNodeCheck.CoreApp/bin/Release/net10.0/win-x64/publish/
-src/DtxNodeCheck.WorkstationApp/bin/Release/net10.0/win-x64/publish/
-src/DtxNodeCheck.ClientApp/bin/Release/net10.0/win-x64/publish/
+src/DtxNodeCheck.App/bin/Release/net10.0/win-x64/publish/
 ```
 
 ## Exit code

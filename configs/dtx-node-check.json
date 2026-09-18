@@ -1,0 +1,48 @@
+{
+  "environmentName": "WGO DTX Node Check",
+  "common": {
+    "requiredDirectories": [],
+    "requiredFiles": [],
+    "requiredProcesses": [],
+    "requiredServices": [],
+    "requiredTcpListeners": []
+  },
+  "nodes": {
+    "core": {
+      "displayName": "DTX Core",
+      "requiredDirectories": [],
+      "requiredFiles": [],
+      "requiredProcesses": [],
+      "requiredServices": [],
+      "requiredTcpListeners": []
+    },
+    "workstation": {
+      "displayName": "DTX Workstation",
+      "requiredDirectories": [],
+      "requiredFiles": [],
+      "requiredProcesses": [
+        {
+          "name": "DTXStudioClinic",
+          "displayName": "DTX Studio Clinic",
+          "required": false
+        }
+      ],
+      "requiredServices": [],
+      "requiredTcpListeners": []
+    },
+    "client": {
+      "displayName": "DTX Client",
+      "requiredDirectories": [],
+      "requiredFiles": [],
+      "requiredProcesses": [
+        {
+          "name": "DTXStudioClinic",
+          "displayName": "DTX Studio Clinic",
+          "required": false
+        }
+      ],
+      "requiredServices": [],
+      "requiredTcpListeners": []
+    }
+  }
+}

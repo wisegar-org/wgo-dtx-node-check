@@ -1,5 +1,5 @@
 <Project>
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'DtxNodeCheck.CoreApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.WorkstationApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.ClientApp'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'DtxNodeCheck.App' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.CoreApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.WorkstationApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.ClientApp'">
     <DtxNodeCheckDesktopProject>true</DtxNodeCheckDesktopProject>
   </PropertyGroup>
 
