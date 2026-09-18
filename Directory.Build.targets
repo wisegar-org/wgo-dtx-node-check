@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'DtxNodeCheck.CoreApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.WorkstationApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.ClientApp'">
+    <DtxNodeCheckDesktopProject>true</DtxNodeCheckDesktopProject>
+  </PropertyGroup>
+
+  <Target Name="RequireSelfContainedDesktopPublish" BeforeTargets="Publish" Condition="'$(DtxNodeCheckDesktopProject)' == 'true'">
+    <Error
+      Condition="'$(RuntimeIdentifier)' == ''"
+      Text="DtxNodeCheck desktop deploy must specify a RuntimeIdentifier, for example -r win-x64 or -r osx-arm64. Deploys must always be self-contained." />
+    <Error
+      Condition="'$(SelfContained)' != 'true'"
+      Text="DtxNodeCheck desktop deploy must be self-contained. The project sets SelfContained=true when a RuntimeIdentifier is provided; do not override it." />
+  </Target>
+</Project>

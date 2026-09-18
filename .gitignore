@@ -6,4 +6,6 @@ obj/
 .vs/
 .DS_Store
 artifacts/node-apps/*/
+artifacts/deploy/
+artifacts/deploy-self-contained/
 artifacts/inno/
