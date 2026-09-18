@@ -21,7 +21,12 @@ Il solo avvio dell'app non crea report o log.
 `Wisegar.DTXInspector.Core` contiene controlli, inventario e report HTML. L'app unica
 `WGO DTX Inspector` richiede la scelta manuale di Core, Workstation o Client.
 All'avvio nessun nodo e' selezionato e il menu invita a scegliere.
-Nella finestra desktop e' presente una sezione `Documentazione` con link
+La toolbar contiene il selettore nodo e le azioni `Esegui test`, `Inventario PC`
+e `Apri report`, con icone e tooltip. Il menu `Configurazione` raccoglie apertura,
+ricarica e impostazioni da inventario; `Aiuto` contiene documentazione e About.
+I menu sono accessibili da tastiera con Alt+C / Alt+A. Su finestre strette la
+toolbar dispone le azioni su piu' righe senza nasconderle.
+Nel menu `Aiuto > Documentazione` sono presenti link
 ufficiali apribili manualmente. Avvio e inventario non effettuano
 prove di rete; le prove DNS/TCP partono con `Esegui test`.
 Il JSON include [default DTX documentati per versione](docs/dtx-defaults.md): servizio
@@ -79,7 +84,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-1.0.2.exe
+installers\Wisegar.DTXInspector.Setup-1.0.3.exe
 ```
 
 L'installer installa in `Program Files\WGO DTX Inspector`, richiede privilegi

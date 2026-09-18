@@ -12,25 +12,42 @@ internal static class Program
     private static void Main()
     {
         AppBuilder.Configure<Application>().UsePlatformDetect().SetupWithoutStarting();
+        Application.Current!.Styles.Add(new Avalonia.Themes.Fluent.FluentTheme());
         InventorySettingsChecks.Run();
         InfrastructureChecks.Run();
         var window = new MainWindow();
         try
         {
+            var content = (Grid)window.Content!;
+            var toolbar = (WrapPanel)((Border)content.Children[1]).Child!;
+            var menu = (Menu)toolbar.Children[4];
+            var configMenu = (MenuItem)menu.Items[0]!;
+            var helpMenu = (MenuItem)menu.Items[1]!;
+            Assert(configMenu.Items.Contains(Field<MenuItem>(window, "_inventorySettingsButton")), "Inventory import accessible in configuration menu");
+            Assert(((MenuItem)helpMenu.Items[0]!).Items.Count == 4, "Official documentation links accessible from help menu");
+            foreach (var width in new[] { 724d, 944d })
+            {
+                toolbar.Measure(new Size(width, double.PositiveInfinity));
+                toolbar.Arrange(new Rect(0, 0, width, toolbar.DesiredSize.Height));
+                Assert(toolbar.Children.All(child => child.Bounds.Right <= width && child.Bounds.Width > 0),
+                    "Toolbar actions remain visible at minimum and default window widths");
+            }
             Assert(!Field<Button>(window, "_runButton").IsEnabled, "Tests require a node at startup");
-            Assert(!Field<Button>(window, "_inventorySettingsButton").IsEnabled, "Settings import requires selected node");
+            Assert(!Field<MenuItem>(window, "_inventorySettingsButton").IsEnabled, "Settings import requires selected node");
             Assert(Field<ComboBox>(window, "_nodeSelector").SelectedIndex == -1, "No role is automatically selected");
             Assert(Field<TextBlock>(window, "_status").Text!.Contains("Seleziona"), "Startup requests a role");
             typeof(MainWindow).GetMethod("ReloadPlan", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, null);
             Assert(Field<ComboBox>(window, "_nodeSelector").SelectedIndex == -1, "Reload cannot infer a role");
             Assert(Field<TextBlock>(window, "_status").Text!.Contains("Seleziona"), "Reload requests a role");
-            Assert(Field<Button>(window, "_openConfigButton").IsEnabled, "Config accessible before selection");
-            Assert(Field<Button>(window, "_reloadConfigButton").IsEnabled, "Reload accessible before selection");
+            Assert(Field<MenuItem>(window, "_openConfigButton").IsEnabled, "Config accessible before selection");
+            Assert(Field<MenuItem>(window, "_reloadConfigButton").IsEnabled, "Reload accessible before selection");
             Busy(window, true);
             Assert(!Field<ComboBox>(window, "_nodeSelector").IsEnabled, "Selection locked during work");
+            Assert(!Field<MenuItem>(window, "_openConfigButton").IsEnabled && !Field<MenuItem>(window, "_reloadConfigButton").IsEnabled,
+                "Configuration menu actions locked during work");
             Busy(window, false);
             Assert(!Field<Button>(window, "_runButton").IsEnabled, "Inventory completion must not enable tests without a node");
-            Assert(Field<Button>(window, "_openConfigButton").IsEnabled, "Config restored after work");
+            Assert(Field<MenuItem>(window, "_openConfigButton").IsEnabled, "Config restored after work");
             foreach (var role in Enum.GetValues<DtxNodeRole>())
             {
                 Field<ComboBox>(window, "_nodeSelector").SelectedIndex = (int)role;
@@ -42,14 +59,14 @@ internal static class Program
                     == (role != DtxNodeRole.Core), "Node-specific checks are preserved in unified config");
                 Assert(paths.ReportPath.Contains($"DTX-{role.ToString().ToLowerInvariant()}-Report.html"), "Report follows selected role");
                 Busy(window, true);
-                Assert(!Field<Button>(window, "_inventorySettingsButton").IsEnabled, "Settings import disabled during work");
+                Assert(!Field<MenuItem>(window, "_inventorySettingsButton").IsEnabled, "Settings import disabled during work");
                 Busy(window, false);
-                Assert(Field<Button>(window, "_inventorySettingsButton").IsEnabled, "Settings import available after node selection");
+                Assert(Field<MenuItem>(window, "_inventorySettingsButton").IsEnabled, "Settings import available after node selection");
                 Assert(Field<Button>(window, "_runButton").IsEnabled == OperatingSystem.IsWindows(), "Tests enabled for selected role only on Windows");
             }
             Field<ComboBox>(window, "_nodeSelector").SelectedIndex = -1;
             Assert(!Field<Button>(window, "_runButton").IsEnabled, "Clearing selection blocks tests");
-            Assert(!Field<Button>(window, "_inventorySettingsButton").IsEnabled, "Clearing selection blocks settings import");
+            Assert(!Field<MenuItem>(window, "_inventorySettingsButton").IsEnabled, "Clearing selection blocks settings import");
             Assert(Field<TextBlock>(window, "_status").Text!.Contains("Seleziona"), "Clearing selection requests a new choice");
             Assert(typeof(MainWindow).GetField("_paths", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window) is null,
                 "Clearing selection discards previous role paths");

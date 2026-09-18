@@ -39,10 +39,10 @@ public sealed class MainWindow : Window
     private readonly Button _runButton;
     private readonly Button _inventoryButton;
     private readonly Button _openReportButton;
-    private readonly Button _openConfigButton;
-    private readonly Button _reloadConfigButton;
-    private readonly Button _inventorySettingsButton;
-    private readonly Button _aboutButton;
+    private readonly MenuItem _openConfigButton;
+    private readonly MenuItem _reloadConfigButton;
+    private readonly MenuItem _inventorySettingsButton;
+    private readonly MenuItem _aboutButton;
     private string? _lastReportPath;
     private bool _updatingNodeSelector;
 
@@ -104,51 +104,78 @@ public sealed class MainWindow : Window
         };
         _nodeSelector.SelectionChanged += (_, _) => SelectNodeFromUi();
 
-        _runButton = new Button { Content = "Esegui test", MinWidth = 120 };
+        _runButton = CreateToolbarButton("Esegui test", "Avvia i controlli sul nodo selezionato", "M 3,2 L 14,8 L 3,14 Z");
         _runButton.Click += async (_, _) => await RunChecksAsync();
 
-        _inventoryButton = new Button { Content = "Inventario PC", MinWidth = 120 };
+        _inventoryButton = CreateToolbarButton("Inventario PC", "Rileva i componenti del PC", "M 1,1 H 15 V 11 H 9 V 13 H 12 V 15 H 4 V 13 H 7 V 11 H 1 Z M 3,3 V 9 H 13 V 3 Z");
         _inventoryButton.Click += async (_, _) => await RunInventoryAsync();
 
-        _openReportButton = new Button { Content = "Apri report", MinWidth = 120, IsEnabled = false };
+        _openReportButton = CreateToolbarButton("Apri report", "Apri l’ultimo report generato", "M 3,1 H 10 L 14,5 V 15 H 3 Z M 5,7 V 8 H 12 V 7 Z M 5,10 V 11 H 12 V 10 Z");
+        _openReportButton.IsEnabled = false;
         _openReportButton.Click += (_, _) => OpenLastReport();
 
-        _openConfigButton = new Button { Content = "Apri config", MinWidth = 120 };
+        _openConfigButton = new MenuItem { Header = "_Apri config" };
         _openConfigButton.Click += (_, _) => OpenConfigFile();
 
-        _reloadConfigButton = new Button { Content = "Ricarica config", MinWidth = 120 };
+        _reloadConfigButton = new MenuItem { Header = "_Ricarica config" };
         _reloadConfigButton.Click += (_, _) => ReloadPlan();
 
-        _aboutButton = new Button { Content = "About", MinWidth = 96 };
+        _aboutButton = new MenuItem { Header = "_Informazioni su WGO DTX Inspector" };
         _aboutButton.Click += async (_, _) => await ShowAboutAsync();
 
-        _inventorySettingsButton = new Button { Content = "Impostazioni da inventario", MinWidth = 190 };
+        _inventorySettingsButton = new MenuItem { Header = "_Impostazioni da inventario..." };
         ToolTip.SetTip(_inventorySettingsButton, "Seleziona un nodo per generarne le impostazioni dai componenti DTX locali.");
         _inventorySettingsButton.Click += async (_, _) => await LoadInventorySettingsAsync();
 
-        var buttons = new WrapPanel
+        var configMenu = new MenuItem
         {
-            Orientation = Orientation.Horizontal,
-            Margin = new Thickness(0, 12, 0, 12),
-            Children = { _nodeSelector, _runButton, _inventoryButton, _openReportButton, _openConfigButton, _reloadConfigButton, _inventorySettingsButton, _aboutButton }
+            Header = "_Configurazione",
+            ItemsSource = new Control[] { _openConfigButton, _reloadConfigButton, new Separator(), _inventorySettingsButton }
         };
-        foreach (var button in buttons.Children)
-            button.Margin = new Thickness(0, 0, 8, 8);
+        var helpMenu = new MenuItem
+        {
+            Header = "_Aiuto",
+            ItemsSource = new Control[] { CreateDocumentationMenu(), new Separator(), _aboutButton }
+        };
+        var menu = new Menu { ItemsSource = new[] { configMenu, helpMenu }, VerticalAlignment = VerticalAlignment.Center };
+        ToolTip.SetTip(configMenu, "Apri, ricarica o genera le impostazioni del nodo");
+        ToolTip.SetTip(helpMenu, "Documentazione ufficiale e informazioni sull’app");
+        ToolTip.SetTip(_nodeSelector, "Scegli il ruolo del nodo da controllare");
+        Avalonia.Automation.AutomationProperties.SetName(_nodeSelector, "Nodo da controllare");
 
-        var documentationLinks = CreateDocumentationLinks();
+        var toolbar = new WrapPanel
+        {
+            Name = "MainToolbar",
+            Orientation = Orientation.Horizontal,
+            Children = { _nodeSelector, _runButton, _inventoryButton, _openReportButton, menu }
+        };
+        foreach (var control in toolbar.Children)
+        {
+            control.Margin = new Thickness(0, 3, 8, 3);
+            control.VerticalAlignment = VerticalAlignment.Center;
+        }
+        var toolbarBorder = new Border
+        {
+            Child = toolbar,
+            BorderBrush = Brushes.LightGray,
+            BorderThickness = new Thickness(0, 1, 0, 1),
+            Padding = new Thickness(0, 5),
+            Margin = new Thickness(0, 12, 0, 8)
+        };
 
         var layout = new Grid
         {
             RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*"),
             Margin = new Thickness(18)
         };
-        layout.Children.Add(new StackPanel { Children = { title, _subtitle, _status } });
-        Grid.SetRow(_progress, 1);
+        layout.Children.Add(new StackPanel { Children = { title, _subtitle } });
+        Grid.SetRow(toolbarBorder, 1);
+        layout.Children.Add(toolbarBorder);
+        Grid.SetRow(_status, 2);
+        layout.Children.Add(_status);
+        Grid.SetRow(_progress, 3);
+        _progress.Margin = new Thickness(0, 0, 0, 10);
         layout.Children.Add(_progress);
-        Grid.SetRow(buttons, 2);
-        layout.Children.Add(buttons);
-        Grid.SetRow(documentationLinks, 3);
-        layout.Children.Add(documentationLinks);
         Grid.SetRow(_log, 4);
         layout.Children.Add(_log);
 
@@ -157,43 +184,38 @@ public sealed class MainWindow : Window
         Opened += (_, _) => { if (_nodeRole is null) RequestNodeSelection(); };
     }
 
-    private Control CreateDocumentationLinks()
+    private static Button CreateToolbarButton(string label, string tooltip, string geometry)
     {
-        var title = new TextBlock
+        var button = new Button
         {
-            Text = "Documentazione",
-            FontWeight = FontWeight.SemiBold,
-            Margin = new Thickness(0, 0, 12, 0),
-            VerticalAlignment = VerticalAlignment.Center
+            Padding = new Thickness(10, 7),
+            Content = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Spacing = 7,
+                Children =
+                {
+                    new PathIcon { Data = Geometry.Parse(geometry), Width = 16, Height = 16 },
+                    new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center }
+                }
+            }
         };
+        ToolTip.SetTip(button, tooltip);
+        Avalonia.Automation.AutomationProperties.SetName(button, label);
+        return button;
+    }
 
-        var links = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 8
-        };
-
+    private MenuItem CreateDocumentationMenu()
+    {
+        var menu = new MenuItem { Header = "_Documentazione" };
         foreach (var officialLink in OfficialLinks)
         {
-            var button = new Button
-            {
-                Content = officialLink.Label,
-                Tag = officialLink.Url,
-                Padding = new Thickness(10, 5),
-                MinWidth = 96
-            };
-            ToolTip.SetTip(button, officialLink.Url);
-            button.Click += (_, _) => OpenOfficialLink(officialLink);
-            links.Children.Add(button);
+            var item = new MenuItem { Header = officialLink.Label };
+            ToolTip.SetTip(item, officialLink.Url);
+            item.Click += (_, _) => OpenOfficialLink(officialLink);
+            menu.Items.Add(item);
         }
-
-        return new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            Spacing = 4,
-            Margin = new Thickness(0, 0, 0, 12),
-            Children = { title, links }
-        };
+        return menu;
     }
 
     private void ReloadPlan()

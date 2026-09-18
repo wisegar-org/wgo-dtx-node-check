@@ -2,6 +2,14 @@
 
 ## Continuation on Windows - 2026-09-18
 
+### Compact toolbar
+
+- Main toolbar has node selection and icon/text buttons for tests, inventory and
+  report. Configuration menu hosts open/reload/inventory import; Help hosts official
+  documentation and About. Native Avalonia menu mnemonics Alt+C/Alt+A and tooltips.
+- Toolbar wraps at narrow widths; role and busy-state restrictions apply to menu
+  actions as before, including inventory replacement confirmation.
+
 ### Manual node selection only
 
 - Removed NodeRoleDetector and detection API/models. No automatic startup inventory
