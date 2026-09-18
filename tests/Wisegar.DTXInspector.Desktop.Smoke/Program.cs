@@ -15,12 +15,13 @@ internal static class Program
         Application.Current!.Styles.Add(new Avalonia.Themes.Fluent.FluentTheme());
         InventorySettingsChecks.Run();
         InfrastructureChecks.Run();
+        DtxInspectionChecks.Run();
         var window = new MainWindow();
         try
         {
             var content = (Grid)window.Content!;
             var toolbar = (WrapPanel)((Border)content.Children[1]).Child!;
-            var menu = (Menu)toolbar.Children[4];
+            var menu = toolbar.Children.OfType<Menu>().Single();
             var configMenu = (MenuItem)menu.Items[0]!;
             var helpMenu = (MenuItem)menu.Items[1]!;
             Assert(configMenu.Items.Contains(Field<MenuItem>(window, "_inventorySettingsButton")), "Inventory import accessible in configuration menu");
@@ -33,6 +34,7 @@ internal static class Program
                     "Toolbar actions remain visible at minimum and default window widths");
             }
             Assert(!Field<Button>(window, "_runButton").IsEnabled, "Tests require a node at startup");
+            Assert(!Field<Button>(window, "_inspectButton").IsEnabled, "DTX inspection requires a node");
             Assert(!Field<MenuItem>(window, "_inventorySettingsButton").IsEnabled, "Settings import requires selected node");
             Assert(Field<ComboBox>(window, "_nodeSelector").SelectedIndex == -1, "No role is automatically selected");
             Assert(Field<TextBlock>(window, "_status").Text!.Contains("Seleziona"), "Startup requests a role");
@@ -59,13 +61,16 @@ internal static class Program
                     == (role != DtxNodeRole.Core), "Node-specific checks are preserved in unified config");
                 Assert(paths.ReportPath.Contains($"DTX-{role.ToString().ToLowerInvariant()}-Report.html"), "Report follows selected role");
                 Busy(window, true);
+                Assert(!Field<Button>(window, "_inspectButton").IsEnabled, "DTX inspection locked during work");
                 Assert(!Field<MenuItem>(window, "_inventorySettingsButton").IsEnabled, "Settings import disabled during work");
                 Busy(window, false);
                 Assert(Field<MenuItem>(window, "_inventorySettingsButton").IsEnabled, "Settings import available after node selection");
                 Assert(Field<Button>(window, "_runButton").IsEnabled == OperatingSystem.IsWindows(), "Tests enabled for selected role only on Windows");
+                Assert(Field<Button>(window, "_inspectButton").IsEnabled == OperatingSystem.IsWindows(), "DTX inspection available for selected role");
             }
             Field<ComboBox>(window, "_nodeSelector").SelectedIndex = -1;
             Assert(!Field<Button>(window, "_runButton").IsEnabled, "Clearing selection blocks tests");
+            Assert(!Field<Button>(window, "_inspectButton").IsEnabled, "Clearing selection blocks DTX inspection");
             Assert(!Field<MenuItem>(window, "_inventorySettingsButton").IsEnabled, "Clearing selection blocks settings import");
             Assert(Field<TextBlock>(window, "_status").Text!.Contains("Seleziona"), "Clearing selection requests a new choice");
             Assert(typeof(MainWindow).GetField("_paths", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window) is null,

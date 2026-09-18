@@ -41,7 +41,8 @@ internal sealed record ProcessInventory(
 internal sealed record ServiceInventory(
     string Name,
     string DisplayName,
-    string Status);
+    string Status,
+    int ProcessId = 0);
 
 internal sealed record TcpListenerInventory(
     string Address,

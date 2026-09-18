@@ -38,6 +38,7 @@ public sealed class MainWindow : Window
     private readonly ComboBox _nodeSelector;
     private readonly Button _runButton;
     private readonly Button _inventoryButton;
+    private readonly Button _inspectButton;
     private readonly Button _openReportButton;
     private readonly MenuItem _openConfigButton;
     private readonly MenuItem _reloadConfigButton;
@@ -110,6 +111,10 @@ public sealed class MainWindow : Window
         _inventoryButton = CreateToolbarButton("Inventario PC", "Rileva i componenti del PC", "M 1,1 H 15 V 11 H 9 V 13 H 12 V 15 H 4 V 13 H 7 V 11 H 1 Z M 3,3 V 9 H 13 V 3 Z");
         _inventoryButton.Click += async (_, _) => await RunInventoryAsync();
 
+        _inspectButton = CreateToolbarButton("Ispeziona DTX", "Servizi, processi, porte TCP con PID, IP e DNS del nodo",
+            "M 6,1 A 5,5 0 1 0 6,11 A 5,5 0 0 0 6,1 Z M 6,3 A 3,3 0 1 1 6,9 A 3,3 0 0 1 6,3 Z M 10,9 L 15,14 L 13,16 L 8,11 Z");
+        _inspectButton.Click += async (_, _) => await RunChecksAsync(inspectDtx: true);
+
         _openReportButton = CreateToolbarButton("Apri report", "Apri l’ultimo report generato", "M 3,1 H 10 L 14,5 V 15 H 3 Z M 5,7 V 8 H 12 V 7 Z M 5,10 V 11 H 12 V 10 Z");
         _openReportButton.IsEnabled = false;
         _openReportButton.Click += (_, _) => OpenLastReport();
@@ -147,7 +152,7 @@ public sealed class MainWindow : Window
         {
             Name = "MainToolbar",
             Orientation = Orientation.Horizontal,
-            Children = { _nodeSelector, _runButton, _inventoryButton, _openReportButton, menu }
+            Children = { _nodeSelector, _runButton, _inspectButton, _inventoryButton, _openReportButton, menu }
         };
         foreach (var control in toolbar.Children)
         {
@@ -295,6 +300,7 @@ public sealed class MainWindow : Window
     {
         var hasNode = _nodeRole is not null && _paths is not null;
         _runButton.IsEnabled = hasNode && OperatingSystem.IsWindows();
+        _inspectButton.IsEnabled = hasNode && OperatingSystem.IsWindows();
         _inventorySettingsButton.IsEnabled = hasNode && OperatingSystem.IsWindows();
         _inventoryButton.IsEnabled = OperatingSystem.IsWindows();
         _openConfigButton.IsEnabled = true;
@@ -332,9 +338,9 @@ public sealed class MainWindow : Window
         }
     }
 
-    private async Task RunChecksAsync()
+    private async Task RunChecksAsync(bool inspectDtx = false)
     {
-        SetBusy(true, "Esecuzione controlli...");
+        SetBusy(true, inspectDtx ? "Ispezione servizi, porte, IP e DNS DTX..." : "Esecuzione controlli...");
         if (_nodeRole is null || _paths is null)
         {
             AppendLine("[ERROR] nodo - Nodo non selezionato.");
@@ -361,7 +367,8 @@ public sealed class MainWindow : Window
                 await Task.Delay(60);
             }
 
-            var result = await Task.Run(() => NodeCheckService.RunCheck(_paths.ConfigPath, _nodeRole.Value, _paths.ReportPath, _paths.LogPath, openReport: true));
+            var result = await Task.Run(() => NodeCheckService.RunCheck(_paths.ConfigPath, _nodeRole.Value, _paths.ReportPath, _paths.LogPath,
+                openReport: true, inspectDtx: inspectDtx));
             _progress.Value = _progress.Maximum;
             AppendLine("");
             AppendLine("Risultati");
@@ -422,6 +429,7 @@ public sealed class MainWindow : Window
     {
         UpdateControlsForNode();
         _runButton.IsEnabled &= !busy;
+        _inspectButton.IsEnabled &= !busy;
         _inventoryButton.IsEnabled &= !busy;
         _inventorySettingsButton.IsEnabled &= !busy;
         _nodeSelector.IsEnabled = !busy;

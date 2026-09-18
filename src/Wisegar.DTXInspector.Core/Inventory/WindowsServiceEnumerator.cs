@@ -87,7 +87,8 @@ internal static class WindowsServiceEnumerator
                     services.Add(new ServiceInventory(
                         item.ServiceName,
                         item.DisplayName,
-                        ServiceStateName(item.ServiceStatus.CurrentState)));
+                        ServiceStateName(item.ServiceStatus.CurrentState),
+                        (int)item.ServiceStatus.ProcessId));
                 }
 
                 return services

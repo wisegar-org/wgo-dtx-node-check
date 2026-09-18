@@ -89,7 +89,8 @@ public static class NodeCheckService
         DtxNodeRole role,
         string reportPath,
         string logPath,
-        bool openReport)
+        bool openReport,
+        bool inspectDtx = false)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -107,7 +108,11 @@ public static class NodeCheckService
         var configuration = CheckConfigurationLoader.Load(configPath);
         var profile = configuration.BuildProfile(ToNodeKind(role));
         var run = CheckRunner.Run(configuration, profile);
+        if (inspectDtx)
+            run = run with { Results = DtxInspection.Run(profile).Concat(run.Results).ToArray() };
         reportPath = CreateReportPathForRun(reportPath, role, Environment.MachineName);
+        if (inspectDtx)
+            reportPath = Path.Combine(Path.GetDirectoryName(reportPath)!, "Inspection-" + Path.GetFileName(reportPath));
         var rendered = ReportRenderer.Render(run, ReportFormat.Html);
         ReportWriter.Write(reportPath, rendered);
 

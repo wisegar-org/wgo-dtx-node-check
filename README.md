@@ -54,6 +54,26 @@ si puo' aprire prima della selezione; `Ricarica config` chiede di scegliere
 se il nodo non e' ancora selezionato, altrimenti ricarica il piano del nodo.
 La selezione manuale resta valida durante la sessione.
 
+### Ispeziona DTX
+
+Selezionare il ruolo del PC e premere `Ispeziona DTX` nella toolbar. Il report HTML
+mostra servizi (nome interno, nome visualizzato, stato e PID), processi candidati,
+listener e connessioni TCP IPv4/IPv6 con processo proprietario e indirizzi remoti,
+schede locali con GUID, IP, DHCP, IPv6 e server DNS. La scheda configurata per DTX
+e' distinta dalle altre schede di contesto.
+
+La correlazione usa nomi DTX, processi/servizi configurati e PID. Le porte note
+occupate da processi estranei sono solo candidati da verificare. I processi
+condivisi non consentono di attribuire una porta a un singolo servizio. Campioni
+non atomici e processi terminati possono limitare la correlazione; nessuna porta
+viene interpretata come prova del protocollo. Il tool Inspector e' escluso dalla
+ricerca euristica DTX. UDP non e' incluso e non viene eseguita alcuna scansione.
+
+L'ispezione esegue anche la checklist obbligatoria e le prove DNS/TCP sui target
+configurati, con timeout. Target mancanti e letture incomplete restano segnalati.
+Il report `Inspection-DTX-<ruolo>-<PC>-<data>-<id>.html` e' separato per esecuzione;
+le impostazioni e la rete del PC non vengono modificate.
+
 Su Windows l'eseguibile richiede privilegi amministrativi tramite UAC.
 L'app viene compilata e distribuita solo per Windows x64, con runtime incluso.
 Le opzioni della CLI storica non sono
@@ -86,7 +106,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-1.0.4.exe
+installers\Wisegar.DTXInspector.Setup-1.0.5.exe
 ```
 
 L'installer installa in `Program Files\WGO DTX Inspector`, richiede privilegi

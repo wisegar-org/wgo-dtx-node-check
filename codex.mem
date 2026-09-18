@@ -2,6 +2,20 @@
 
 ## Continuation on Windows - 2026-09-18
 
+### DTX inspection
+
+- New Ispeziona DTX toolbar action requires a manually selected role and observes
+  local services/state/PID, candidate processes, owned TCP IPv4/IPv6 listeners and
+  connections, local/remote IPs, adapter GUID/IP/DHCP/IPv6 and configured DNS servers.
+- Uses read-only GetExtendedTcpTable OWNER_PID_ALL; no shell, port scan or UDP.
+  Service PID comes from existing EnumServicesStatusEx. Named/configured candidates
+  are distinguished from port-only matches; shared process ownership stays explicit.
+- Runs existing mandatory checklist and bounded configured DNS/TCP probes once;
+  writes separate Inspection-DTX role/machine/timestamp/id HTML reports.
+- Verified native TCP ownership against real loopback listeners for both families,
+  ambiguous service ownership, unrelated ports, incomplete reads, report formats
+  and UI role/busy guards. Installer version 1.0.5.
+
 ### Static IP and disabled IPv6 for every role
 
 - Latest user policy supersedes earlier client exceptions: Core, Workstation and
