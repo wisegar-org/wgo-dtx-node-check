@@ -2,6 +2,15 @@
 
 ## Continuation on Windows - 2026-09-18
 
+### Static IP and disabled IPv6 for every role
+
+- Latest user policy supersedes earlier client exceptions: Core, Workstation and
+  Client all require static IPv4 and disabled IPv6 on the selected DTX adapter.
+- Removed client DHCP exception and obsolete clientRequiresIpv6Disabled setting.
+  Legacy JSON fields cannot disable this mandatory check. No OS/network changes.
+- DHCP or observed IPv6 (including link-local) fails. Missing adapter or absence
+  of IPv6 addresses without binding evidence remains unverified, not PASS.
+
 ### Compact toolbar
 
 - Main toolbar has node selection and icon/text buttons for tests, inventory and

@@ -98,7 +98,6 @@ internal sealed class InfrastructureSettings
     public string? OperationalUser { get; set; }
     public string[] LocalDtxDirectories { get; set; } = [];
     public string[] DtxServiceNames { get; set; } = [];
-    public bool? ClientRequiresIpv6Disabled { get; set; }
     public bool? DicomRequired { get; set; }
     public NetworkEndpoint[] Endpoints { get; set; } = [];
     public int NetworkTimeoutMs { get; set; } = 2000;

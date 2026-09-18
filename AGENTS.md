@@ -35,8 +35,8 @@ configure IP, IPv6, hostname, DNS, services, firewall, hosts or security product
   adapters or hosts overrides; operational user read/write access to local DTX
   directories (especially C:\ProgramData\DTX Studio...); DTX installation and
   updates performed with local administrator privileges.
-- Client: correct internal DNS resolution of Core; DHCP permitted only with fast,
-  stable local DNS; IPv6 disabled if required for this client by TiDental/Dexis;
+- Client: static IP and IPv6 disabled on the DTX adapter, as for every other role;
+  correct internal DNS resolution of Core;
   hostname unchanged since association/installation; no active VPN/mesh,
   interfering virtual adapters or hosts overrides.
 - Every node report: functional bidirectional DNS between Core/workstations/clients;
@@ -44,6 +44,10 @@ configure IP, IPv6, hostname, DNS, services, firewall, hosts or security product
   required REST, gRPC and dynamic/service TCP communication; DICOM TCP 104 when
   required; no AV/EDR SSL/TLS inspection or DPI on local DTX traffic; verify DTX
   data exchange does not depend on SMB shares or mapped drives.
+
+Latest user policy: every role requires static IPv4 and disabled IPv6 on the DTX
+adapter. DHCP is FAIL even on clients with stable DNS. The legacy
+clientRequiresIpv6Disabled setting must not exempt clients from this requirement.
 
 Generate a separate report per tested node role and machine; never combine roles
 into a single successful assessment. Show role, hostname, time, evidence and the
@@ -144,4 +148,3 @@ The preferred future state is a single branded app:
 - manual override in UI
 - HTML reports opened automatically after test/inventory runs
 - self-contained deploys for Windows x64 only
-

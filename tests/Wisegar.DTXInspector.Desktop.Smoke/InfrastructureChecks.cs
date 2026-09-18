@@ -40,7 +40,7 @@ internal static class InfrastructureChecks
             }
         }
         var settings = new InfrastructureSettings { AdapterId = "nic", ExpectedHostname = "TEST-PC", InternalDnsServers = ["10.0.0.1"],
-            DicomRequired = false, ClientRequiresIpv6Disabled = false };
+            DicomRequired = false };
         var core = configuration.BuildProfile(NodeKind.Core) with { Infrastructure = settings };
         CheckResult Check(string id, NodeProfile profile, InfrastructureSnapshot data) =>
             InfrastructureChecklist.Run(profile, data).Single(r => r.Details["checkId"] == id);
@@ -62,10 +62,25 @@ internal static class InfrastructureChecks
         var dhcp = snapshot with { Adapters = [snapshot.Adapters[0] with { Dhcp = true }] };
         Assert(Check("ip", core, dhcp).Status == CheckStatus.Fail, "Core DHCP rejected");
         var client = configuration.BuildProfile(NodeKind.Client) with { Infrastructure = settings };
-        Assert(Check("ip", client, dhcp).Status == CheckStatus.Warning, "Client DHCP needs stable DNS proof");
+        Assert(Check("ip", client, dhcp).Status == CheckStatus.Fail, "Client DHCP rejected even with stable DNS");
         Assert(Check("ip", client, snapshot with { Adapters = [snapshot.Adapters[0] with { Ipv4 = ["169.254.1.1"] }] }).Status == CheckStatus.Fail,
             "APIPA is not a valid static client address");
-        Assert(Check("ipv6", client, snapshot).Status == CheckStatus.NotApplicable, "Client IPv6 applicability explicit");
+        Assert(Check("ipv6", client, snapshot).Status == CheckStatus.Warning, "Client also requires disabled IPv6 binding verification");
+        var legacy = System.Text.Json.JsonSerializer.Deserialize(
+            """{"nodes":{"client":{"infrastructure":{"adapterId":"nic","clientRequiresIpv6Disabled":false}}}}""",
+            CheckConfigurationJsonContext.Default.CheckConfiguration)!.BuildProfile(NodeKind.Client);
+        Assert(Check("ipv6", legacy, snapshot with { Adapters = [snapshot.Adapters[0] with { Ipv6 = ["fe80::1"] }] }).Status == CheckStatus.Fail,
+            "Legacy client exemption cannot bypass mandatory IPv6 check");
+        foreach (var role in Enum.GetValues<NodeKind>())
+        {
+            var profile = configuration.BuildProfile(role) with { Infrastructure = settings };
+            Assert(Check("ip", profile, dhcp).Status == CheckStatus.Fail, "Every role rejects DHCP");
+            Assert(Check("ip", profile, snapshot).Status == CheckStatus.Pass, "Every role accepts observed static IPv4");
+            Assert(Check("ipv6", profile, snapshot with { Adapters = [snapshot.Adapters[0] with { Ipv6 = ["fe80::1"] }] }).Status == CheckStatus.Fail,
+                "Every role rejects IPv6, including link-local addresses");
+            Assert(Check("ipv6", profile, snapshot with { Adapters = [] }).Status == CheckStatus.Warning,
+                "Missing adapter cannot pass IPv6 requirement");
+        }
         Assert(Check("dicom", core, snapshot).Status == CheckStatus.NotApplicable, "DICOM applicability explicit");
         Assert(Check("hostname", core, snapshot with { Hostname = "RENAMED" }).Status == CheckStatus.Fail, "Renamed host rejected");
         Assert(Check("ipv6", core, snapshot).Status == CheckStatus.Warning, "No IPv6 addresses is not proof of disabled binding");

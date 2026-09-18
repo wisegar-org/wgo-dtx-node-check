@@ -64,8 +64,8 @@ internal static class InfrastructureChecklist
     {
         var items = new List<InfrastructureItem>
         {
-            new("ip", role == NodeKind.Client ? "DHCP solo con DNS rapido e stabile" : "IP statico del nodo DTX"),
-            new("ipv6", "IPv6 disabilitato sulla scheda DTX (Client: se richiesto)"),
+            new("ip", "IP statico del nodo DTX"),
+            new("ipv6", "IPv6 disabilitato sulla scheda DTX"),
             new("hostname", "Hostname invariato dall'installazione/associazione"),
             new("core-dns", "Risoluzione del Core tramite DNS locale interno"),
             new("vpn", "Assenza di VPN/mesh attivi e adapter virtuali interferenti"),
@@ -142,16 +142,9 @@ internal static class InfrastructureChecklist
                 details["dhcp"] = adapter.Dhcp.ToString();
                 if (adapter.Ipv4.All(ip => ip.StartsWith("169.254.", StringComparison.Ordinal)))
                     return (CheckStatus.Fail, "Solo indirizzi IPv4 link-local; indirizzo DTX non valido.");
-                if (profile.Node == NodeKind.Client)
-                    return adapter.Dhcp.Value ? Unknown("Client DHCP: verificare velocita' e stabilita' del DNS interno nel tempo.")
-                        : (CheckStatus.Pass, "Client con DHCP disabilitato sulla scheda DTX. DNS verificato separatamente.");
                 return adapter.Dhcp.Value ? (CheckStatus.Fail, "DHCP attivo: il nodo richiede IP statico.")
                     : (CheckStatus.Pass, "DHCP disabilitato e IPv4 presente sulla scheda DTX; verificare assegnazione e unicita' IP.");
             case "ipv6":
-                if (profile.Node == NodeKind.Client && settings.ClientRequiresIpv6Disabled == false)
-                    return (CheckStatus.NotApplicable, "Configurazione: disabilitazione IPv6 non richiesta per questo client.");
-                if (profile.Node == NodeKind.Client && settings.ClientRequiresIpv6Disabled is null)
-                    return Unknown("Confermare con TiDental/Dexis l'applicabilita' e impostare clientRequiresIpv6Disabled.");
                 if (adapter is null || !adapter.Up) return Unknown("Scheda DTX non identificata o inattiva.");
                 details["ipv6Addresses"] = string.Join(", ", adapter.Ipv6);
                 return adapter.Ipv6.Length > 0 ? (CheckStatus.Fail, "Indirizzi IPv6 presenti sulla scheda DTX per cui e' richiesta la disabilitazione.")
