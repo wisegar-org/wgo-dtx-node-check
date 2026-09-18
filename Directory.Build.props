@@ -1,6 +1,6 @@
 <Project>
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'DtxNodeCheck.App' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.CoreApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.WorkstationApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.ClientApp'">
-    <DtxNodeCheckDesktopProject>true</DtxNodeCheckDesktopProject>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Wisegar.DTXInspector.App'">
+    <DTXInspectorDesktopProject>true</DTXInspectorDesktopProject>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PlatformTarget>x64</PlatformTarget>
     <SelfContained>true</SelfContained>

@@ -2,6 +2,139 @@
 
 ## Continuation on Windows - 2026-09-18
 
+### Versioned installer filename
+
+- Output now uses Wisegar.DTXInspector.Setup-{AppVersion}.exe, currently 1.0.0.
+  Inno's existing AppVersion definition controls both metadata and filename.
+
+### Setup naming aligned with Wisegar.DTXInspector
+
+- Inno source: packaging/inno/Wisegar.DTXInspector.Setup.iss.
+- Output: installers/Wisegar.DTXInspector.Setup.exe; publisher Wisegar.
+- AppId preserved for upgrades; product name WGO DTX Inspector, app executable
+  and appsettings.json preservation/migration remain unchanged.
+- Marked appsettings.json ExcludeFromSingleFile to keep it external on repeated
+  publishes. Verified Inno compilation and a second publish retains the JSON.
+- Previous-named installer archived under ignored artifacts/deploy/previous-name.
+
+### Project and namespace prefix: Wisegar.DTXInspector
+
+- Solution: Wisegar.DTXInspector.sln. Projects/directories: Wisegar.DTXInspector.App,
+  Wisegar.DTXInspector.Core and tests/Wisegar.DTXInspector.Desktop.Smoke.
+- All source namespaces and project references use Wisegar.DTXInspector; friend
+  test assembly, MSBuild app conditions and Inno publish paths updated together.
+- User-facing WGO DTX Inspector, WgoDtxInspector.exe, installer identity and
+  appsettings.json remain the product/distribution names.
+- Older project paths/names in entries below describe historical versions.
+- Verified renamed Release solution (zero warnings/errors), full smoke runner and
+  Windows x64 self-contained single-file Inno installer compilation.
+
+### Configuration filename: appsettings.json
+
+- Renamed the single source to configs/appsettings.json. App, build, tests and
+  packaging use appsettings.json next to the executable.
+- Inno upgrades rename the legacy dtx-node-check.json if the new file is absent,
+  preserving custom settings. Existing appsettings.json always takes precedence.
+- Earlier filename references below describe historical versions.
+
+### Documented DTX defaults
+
+- Unified JSON includes optional Core 4.0 data directory, HTTPS listeners and
+  PostgreSQL port; Clinic 4.1 install directory/loopback IPC and 4.3 data directory.
+- Core service matched by exact display name documented in Core 3.9, resolving
+  the actual Windows service key. Missing/ambiguous matches remain unverified.
+- Versions/conditions appear in check labels and docs/dtx-defaults.md links official
+  sources. No assumed remote hosts, gRPC ports, Driver service keys or DICOM role.
+- Existing installer JSON remains preserved; inventory replacement behavior unchanged.
+- Verified Release build with zero warnings/errors and smoke tests including display
+  name resolution, stopped/missing/ambiguous services and legacy internal-key matching.
+
+### Product name: WGO DTX Inspector
+
+- User selected `WGO DTX Inspector` as the final app name.
+- Executable: `WgoDtxInspector.exe`; installer: `installers/WgoDtxInspector-Setup.exe`.
+- Inno source renamed to `packaging/inno/WgoDtxInspector.iss`. AppId retained for
+  upgrade continuity; old executable/shortcuts removed by installer, custom JSON retained.
+- New reports/logs use `ProgramData/WGO DTX Inspector`; previous report/log folders
+  remain untouched. Existing installation directory may be reused by Inno on upgrade.
+- Assembly/product metadata, window title, report headings, default environment name
+  and documentation updated. Internal project names and JSON filename remain stable.
+- Inventory settings generation excludes both old Node Check and new Inspector
+  process/directory names to avoid treating the diagnostic tool as a DTX component.
+- Verified Release build (zero warnings/errors), full smoke suite and new Inspector
+  Inno compilation. Previous-named setup archived under ignored artifacts/deploy.
+
+### Single-app cleanup (current architecture)
+
+- User requested leaving only one app. Solution now contains DtxNodeCheck.App
+  (WgoDtxNodeCheck) and DtxNodeCheck.Core (library), with a separate smoke test runner.
+- Removed CoreApp/WorkstationApp/ClientApp projects, entry points and Inno scripts.
+- Moved linked checks/configuration/diagnostics/inventory/report sources into Core.
+  Moved shared Avalonia UI into App/Desktop and the manifest into App.
+- Removed unused historical CLI Program/CliOptions and fixed-role startup options.
+- One app handles all roles; retained unified JSON, inventory import, mandatory
+  checklist, bounded DNS/TCP and separate reports for each tested node.
+- Earlier paths and legacy architecture below are historical only.
+- Verified the two-project Release solution (zero warnings/errors), all smoke
+  tests and regenerated Windows x64 self-contained Inno installer after cleanup.
+- Source cleanup complete. Ignored bin/obj remnants in three former app folders
+  could not be removed (automatic deletion review blocked) or archived (Windows
+  access denied). They are not referenced by the solution or installer.
+
+### Mandatory infrastructure checklist and per-node reports
+
+- User supplied mandatory Core/Workstation/Client and inter-node infrastructure
+  checklist, now enforced in AGENTS.md, planned checks and result generation even
+  with empty config lists. Includes IP, IPv6, hostname baseline, Core/internal DNS,
+  VPN/mesh/virtual adapters/hosts, Core service state/application health, workstation
+  ACL/operational user and installation admin evidence, client DHCP/IPv6 conditions,
+  bidirectional DNS/fallback, traffic/inspection, REST/gRPC/dynamic TCP, conditional
+  DICOM 104, AV/EDR inspection and absence of SMB/mapped-drive dependency.
+- User explicitly authorized always running DNS/TCP probes with timeout when tests
+  are started. This supersedes the previous no-network-during-checks requirement.
+  Startup, inference and inventory remain without network probes.
+- Per-node `infrastructure` holds adapter GUID, approved hostname, Core name/IPs,
+  internal DNS, peers, operational user/directories, services, applicability flags,
+  explicit protocol endpoints, timeout/latency thresholds and manual notes.
+  Inventory import preserves infrastructure baselines instead of overwriting them.
+- DNS uses three system-resolver samples; TCP sends no application payload.
+  Default timeout 2000 ms (100..10000), up to 16 peers/16 endpoints and 4 concurrent
+  probes. No assumed service ports. Missing configuration stays WARNING.
+- Reports explicitly distinguish local observations/probe success from unverified
+  application health, remote direction, long-term DNS stability, internal-resolver
+  provenance, TLS/DPI, effective operational ACL rights and past install privileges.
+  Manual notes never become automatic PASS; applicability flags yield NotApplicable.
+- Every test report filename includes node role, machine, UTC timestamp and unique
+  ID. HTML/text/JSON summaries mark WARNING-only runs as incomplete.
+- Implementation details and limitations: docs/infrastructure-checklist.md.
+- Verified: Release solution build with zero warnings/errors; extended regression
+  suite (all role checklists, all report formats, baseline preservation, DNS IP
+  mismatch, DNS/TCP timeouts with simulated providers, report isolation); real
+  local read-only runs for Core/Workstation/Client without configured network targets.
+  Windows x64 self-contained publish and Inno compilation succeeded; installer
+  updated in installers/WgoDtxNodeCheck-Setup.exe. Real DTX network targets and
+  manual/security requirements have not been certified in this environment.
+
+### Settings from local inventory
+
+- User requested loading settings based on PC inventory with a prior warning
+  that existing settings could be lost.
+- Added `Impostazioni da inventario`, enabled only for a selected node on Windows.
+- Confirmation defaults to Cancel; explicit replacement collects a fresh local
+  inventory and replaces only the selected node section, preserving common and
+  other node settings. Directory/process/service names containing DTX are used,
+  excluding Node Check itself. No TCP ports are inferred without ownership data.
+- Generated checks are optional and must be reviewed. No useful DTX observations
+  means no config changes. Existing JSON receives a unique adjacent `.bak` via
+  atomic file replacement; temporary generated JSON is validated before saving.
+- This user-authorized config write is an exception to read-only behavior;
+  OS settings remain untouched. The plan reloads after successful save.
+- Regression tests cover filtering, node preservation, backup, rejected invalid
+  JSON, empty inventory, new config creation and safe confirmation defaults.
+- Fixed deserialization defaults for omitted check lists in sparse configs.
+- Verified Release solution build (zero warnings/errors) and extended smoke
+  tests. Windows x64 self-contained publish and Inno installer regenerated.
+
 ### Review and commit of Windows-only unified configuration
 
 - Review includes the pending deletion of the three historical installable ZIPs

@@ -22,18 +22,18 @@ set "DOTNET=dotnet"
 where dotnet >nul 2>nul
 if errorlevel 1 set "DOTNET=%ProgramFiles%\dotnet\dotnet.exe"
 
-"%DOTNET%" publish src\DtxNodeCheck.App\DtxNodeCheck.App.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+"%DOTNET%" publish src\Wisegar.DTXInspector.App\Wisegar.DTXInspector.App.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
 if errorlevel 1 goto failed
 
 if not exist installers mkdir installers
 
-"%ISCC%" packaging\inno\WgoDtxNodeCheck.iss
+"%ISCC%" packaging\inno\Wisegar.DTXInspector.Setup.iss
 if errorlevel 1 goto failed
 
 popd >nul
 
 echo.
-echo Installer generato: installers\WgoDtxNodeCheck-Setup.exe
+echo Installer versionato generato nella cartella installers; percorso completo indicato da Inno Setup.
 exit /b 0
 
 :failed

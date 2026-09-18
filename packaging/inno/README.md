@@ -1,7 +1,7 @@
 # Inno Setup Packaging
 
-Questa cartella contiene l'installer Windows unico di WGO DTX Node Check.
-Il file principale e' `WgoDtxNodeCheck.iss`; gli altri `.iss` sono legacy.
+Questa cartella contiene l'installer Windows unico di WGO DTX Inspector.
+L'unico script installer e' `Wisegar.DTXInspector.Setup.iss`.
 
 ## Requisiti
 
@@ -26,7 +26,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Output:
 
 ```text
-installers\WgoDtxNodeCheck-Setup.exe
+installers\Wisegar.DTXInspector.Setup-1.0.0.exe
 ```
 
 ## Comportamento Installer
@@ -37,8 +37,11 @@ installers\WgoDtxNodeCheck-Setup.exe
 - Crea shortcut nel menu Start.
 - Offre opzionalmente shortcut desktop.
 - Registra l'uninstaller standard di Windows.
-- Pubblica solo `DtxNodeCheck.App`, self-contained e single-file per Windows x64.
-- Include `dtx-node-check.json` accanto a `WgoDtxNodeCheck.exe`.
+- Pubblica solo `Wisegar.DTXInspector.App`, self-contained e single-file per Windows x64.
+- Include `appsettings.json` accanto a `WgoDtxInspector.exe`.
+- In aggiornamento rinomina il precedente `dtx-node-check.json` se `appsettings.json`
+  non esiste ancora, conservando le personalizzazioni. Un `appsettings.json` esistente
+  non viene sovrascritto. Per aggiornamenti portabili rinominare il JSON manualmente.
 - Conserva il JSON esistente durante aggiornamento e disinstallazione.
 - Mantiene separate le installazioni legacy: trasferire manualmente eventuali
   controlli personalizzati nel JSON unico prima di disinstallare le vecchie app.

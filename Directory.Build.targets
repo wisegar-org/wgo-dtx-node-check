@@ -1,23 +1,24 @@
 <Project>
-  <ItemGroup Condition="'$(DtxNodeCheckDesktopProject)' == 'true'">
-    <Content Include="$(MSBuildThisFileDirectory)configs/dtx-node-check.json" Link="dtx-node-check.json">
+  <ItemGroup Condition="'$(DTXInspectorDesktopProject)' == 'true'">
+    <Content Include="$(MSBuildThisFileDirectory)configs/appsettings.json" Link="appsettings.json">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
   </ItemGroup>
 
-  <Target Name="RequireWindowsX64DesktopBuild" BeforeTargets="PrepareForBuild;Publish" Condition="'$(DtxNodeCheckDesktopProject)' == 'true'">
+  <Target Name="RequireWindowsX64DesktopBuild" BeforeTargets="PrepareForBuild;Publish" Condition="'$(DTXInspectorDesktopProject)' == 'true'">
     <Error
       Condition="'$(RuntimeIdentifier)' != 'win-x64' Or '$(PlatformTarget)' != 'x64'"
-      Text="DtxNodeCheck desktop builds support only Windows x64 (RuntimeIdentifier=win-x64, PlatformTarget=x64)." />
+      Text="Wisegar.DTXInspector desktop builds support only Windows x64 (RuntimeIdentifier=win-x64, PlatformTarget=x64)." />
     <Error
       Condition="'$(SelfContained)' != 'true'"
-      Text="DtxNodeCheck desktop builds must be self-contained; do not override SelfContained=true." />
+      Text="Wisegar.DTXInspector desktop builds must be self-contained; do not override SelfContained=true." />
   </Target>
 
-  <Target Name="RequireSelfContainedDesktopPublish" BeforeTargets="Publish" DependsOnTargets="RequireWindowsX64DesktopBuild" Condition="'$(DtxNodeCheckDesktopProject)' == 'true'">
+  <Target Name="RequireSelfContainedDesktopPublish" BeforeTargets="Publish" DependsOnTargets="RequireWindowsX64DesktopBuild" Condition="'$(DTXInspectorDesktopProject)' == 'true'">
     <Error
       Condition="'$(PublishSingleFile)' != 'true' Or '$(IncludeNativeLibrariesForSelfExtract)' != 'true'"
-      Text="DtxNodeCheck desktop deploy must be single-file and include native libraries for self extraction; do not override these publish settings." />
+      Text="Wisegar.DTXInspector desktop deploy must be single-file and include native libraries for self extraction; do not override these publish settings." />
   </Target>
 </Project>

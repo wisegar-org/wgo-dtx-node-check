@@ -10,3 +10,5 @@ artifacts/deploy/
 artifacts/deploy-self-contained/
 artifacts/inno/
 installers/*-Setup.exe
+installers/*.Setup.exe
+installers/*.Setup-*.exe

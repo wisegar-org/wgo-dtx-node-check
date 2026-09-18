@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>WgoDtxInspector</AssemblyName>
+    <RootNamespace>Wisegar.DTXInspector.App</RootNamespace>
+    <Product>WGO DTX Inspector</Product>
+    <Title>WGO DTX Inspector</Title>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Wisegar.DTXInspector.Core\Wisegar.DTXInspector.Core.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,27 +1,34 @@
-# WGO DTX Node Check
+# WGO DTX Inspector
 
 App .NET 10 in C# per controlli read-only sui nodi DTX Studio Clinic:
 Core, Workstation e Client. La soluzione contiene una libreria condivisa, una
-app desktop Avalonia UI unica e tre app desktop legacy, una per nodo.
+app desktop Avalonia UI unica per tutti e tre i ruoli.
 
 L'app sostituisce gli script PowerShell esistenti senza eseguire PowerShell,
-comandi shell o chiamate di rete durante i controlli. I controlli sono locali e in sola lettura.
+comandi shell. I controlli non modificano il sistema; ogni esecuzione dei test
+include prove DNS/TCP sui target configurati, con timeout.
 Report e log vengono scritti quando si avviano test o inventario dalla finestra.
+`Impostazioni da inventario` puo' aggiornare il JSON dell'app e salvarne una
+copia di sicurezza, solo dopo conferma esplicita.
 Il solo avvio dell'app non crea report o log.
 
 ## Uso
 
 ```powershell
-.\WgoDtxNodeCheck.exe
+.\WgoDtxInspector.exe
 ```
 
-La CLI storica e' stata rifattorizzata in `DtxNodeCheck.Core`; le app desktop
-usano la stessa logica condivisa e producono report HTML. L'app unica
-`WGO DTX Node Check` prova a inferire il nodo all'avvio usando solo segnali
+`Wisegar.DTXInspector.Core` contiene controlli, inventario e report HTML. L'app unica
+`WGO DTX Inspector` prova a inferire il nodo all'avvio usando solo segnali
 locali read-only. Se il nodo non viene inferito con certezza, l'utente sceglie
 Core, Workstation o Client dalla finestra.
 Nella finestra desktop e' presente una sezione `Documentazione` con link
-ufficiali apribili manualmente; i controlli non accedono alla rete in automatico.
+ufficiali apribili manualmente. Avvio, inferenza nodo e inventario non effettuano
+prove di rete; le prove DNS/TCP partono con `Esegui test`.
+Il JSON include [default DTX documentati per versione](docs/dtx-defaults.md): servizio
+Core, directory dati/installazione, listener Core e IPC locali Clinic. Sono controlli
+opzionali da confermare per l'impianto; i target di rete restano da configurare.
+
 La configurazione del nodo puo' essere aperta dalla finestra, modificata con
 l'editor associato ai file JSON e ricaricata senza riavviare l'app. Ogni
 esecuzione dei test rilegge comunque il file di configurazione da disco.
@@ -30,11 +37,9 @@ percorsi usati.
 
 ## Progetti
 
-- `DtxNodeCheck.Core`: logica condivisa, configurazione, controlli, inventario e rendering report.
-- `DtxNodeCheck.App`: app Avalonia unica `WGO DTX Node Check` con inferenza nodo.
-- `DtxNodeCheck.CoreApp`: app Avalonia legacy per nodo Core.
-- `DtxNodeCheck.WorkstationApp`: app Avalonia legacy per nodo Workstation.
-- `DtxNodeCheck.ClientApp`: app Avalonia legacy per nodo Client.
+- `Wisegar.DTXInspector.Core`: logica condivisa, configurazione, controlli, inventario e rendering report.
+- `Wisegar.DTXInspector.App`: app Avalonia unica `WGO DTX Inspector` con inferenza nodo.
+- `tests/Wisegar.DTXInspector.Desktop.Smoke`: verifiche automatiche, non un'app distribuita.
 
 Aprire l'app, verificare o selezionare il nodo, quindi premere `Esegui test`.
 `Inventario PC` e' disponibile anche senza selezionare un nodo. Entrambe le
@@ -47,13 +52,6 @@ Su Windows l'eseguibile richiede privilegi amministrativi tramite UAC.
 L'app viene compilata e distribuita solo per Windows x64, con runtime incluso.
 Le opzioni della CLI storica non sono
 gestite dall'eseguibile desktop.
-
-## Compatibilita' Legacy
-
-I vecchi ZIP e gli script di installazione CMD/PowerShell per nodo sono stati
-rimossi. Usare l'installer unico descritto sotto. I progetti desktop legacy e
-i relativi sorgenti Inno restano disponibili per compatibilita'; anche queste
-app usano `dtx-node-check.json`, con tutte e tre le sezioni nodo.
 
 ## Fonti Ufficiali
 
@@ -82,16 +80,20 @@ packaging\inno\Build-InnoInstallers.cmd
 Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-installers\WgoDtxNodeCheck-Setup.exe
+installers\Wisegar.DTXInspector.Setup-1.0.0.exe
 ```
 
-L'installer installa in `Program Files\WGO DTX Node Check`, richiede privilegi
-admin e crea cartelle report/log in `ProgramData\WGO DTX Node Check`, shortcut
+L'installer installa in `Program Files\WGO DTX Inspector`, richiede privilegi
+admin e crea cartelle report/log in `ProgramData\WGO DTX Inspector`, shortcut
 Start Menu/Desktop e uninstaller Windows standard. Il JSON e' esterno, accanto
 all'eseguibile: un aggiornamento lo conserva, cosi' come la disinstallazione.
 Le precedenti installazioni per nodo restano separate; le loro configurazioni
 personalizzate vanno riportate manualmente nelle sezioni del JSON unificato.
-Gli script `.iss` legacy restano disponibili per compatibilita'.
+Il repository contiene un solo progetto desktop e un solo script `.iss`.
+Il setup mantiene l'identificativo della precedente app: durante un aggiornamento
+puo' riutilizzare la cartella gia' installata e conserva il JSON personalizzato.
+I nuovi report/log vanno in `ProgramData\WGO DTX Inspector`; quelli precedenti
+restano nella vecchia cartella dati.
 
 ## Controlli implementati
 
@@ -102,7 +104,17 @@ Gli script `.iss` legacy restano disponibili per compatibilita'.
 - Presenza di listener TCP locali configurati tramite API .NET locali.
 
 Non modifica rete, DNS, firewall, servizi, registro, file hosts o
-configurazioni di sistema. Non risolve hostname e non invia dati in rete.
+configurazioni di sistema. Le prove di rete risolvono i nomi configurati e aprono
+connessioni TCP senza inviare payload applicativi.
+
+Ogni test include la checklist infrastrutturale obbligatoria del nodo e delle
+comunicazioni, anche con liste JSON vuote. Configurazione, copertura e limiti:
+[Checklist infrastrutturale](docs/infrastructure-checklist.md).
+
+I report dei test sono separati per ruolo, macchina ed esecuzione:
+`DTX-<nodo>-<PC>-<data-UTC>-<id>.html`. Ogni report riguarda solo il PC su cui
+e' stato eseguito. Se restano requisiti non verificati, il riepilogo indica
+`VERIFICA INCOMPLETA`, anche in assenza di FAIL.
 
 ## Inventario PC
 
@@ -117,16 +129,16 @@ preparare il file JSON di configurazione:
 - programmi installati letti dal registro in sola lettura;
 - directory candidate DTX sotto Program Files e ProgramData.
 
-Il report viene salvato in `ProgramData\WGO DTX Node Check\Reports\DTX-Inventory.html`.
+Il report viene salvato in `ProgramData\WGO DTX Inspector\Reports\DTX-Inventory.html`.
 
 ## Configurazione
 
 Un unico file JSON contiene impostazioni comuni e impostazioni specifiche per
-nodo. L'app unica usa `dtx-node-check.json`; le impostazioni `common` vengono
+nodo. L'app unica usa `appsettings.json`; le impostazioni `common` vengono
 unite a quelle del nodo selezionato o inferito.
 
-L'unico file da mantenere e' [configs/dtx-node-check.json](configs/dtx-node-check.json),
-copiato accanto all'eseguibile in build e pubblicazione, anche per le app legacy.
+L'unico file da mantenere e' [configs/appsettings.json](configs/appsettings.json),
+copiato accanto all'eseguibile in build e pubblicazione.
 `common` contiene i controlli condivisi; `nodes.core`, `nodes.workstation` e
 `nodes.client` contengono quelli specifici. Cambiare nodo non cambia file.
 E' un punto di partenza: aggiungere controlli specifici dell'installazione.
@@ -157,6 +169,27 @@ Schema logico:
 Ogni controllo supporta `required`. Se `true`, l'assenza produce `FAIL`; se
 `false`, produce `WARNING`.
 
+### Impostazioni dall'inventario del PC
+
+Selezionare il nodo e premere `Impostazioni da inventario`. La finestra avvisa
+che le impostazioni correnti del nodo saranno sostituite e le personalizzazioni
+potrebbero andare perse. `Annulla`, Esc o la chiusura della finestra lasciano
+il file invariato; scegliere `Sostituisci impostazioni` per procedere.
+
+L'app legge un nuovo inventario locale e importa directory, processi e servizi
+con nome DTX, escludendo lo stesso Node Check. I controlli generati sono
+facoltativi e vanno verificati: rappresentano cio' che e' presente sul PC,
+non i requisiti ufficiali del prodotto. Le porte TCP non vengono importate
+perche' l'inventario non identifica il processo proprietario.
+
+Viene sostituita solo la sezione del nodo selezionato; `common` e gli altri
+nodi e la sezione `infrastructure` vengono conservati. La checklist obbligatoria
+non viene rimossa dall'importazione. Il JSON precedente viene salvato accanto all'originale
+con suffisso `.bak` univoco. Il nuovo JSON viene validato prima della sostituzione
+e il piano dei controlli viene ricaricato. Se non vengono rilevati componenti
+DTX utili, la configurazione resta invariata. Non vengono modificati servizi,
+registro o impostazioni di Windows.
+
 ## Build
 
 Build locale:
@@ -168,25 +201,17 @@ dotnet build
 Pubblicazione manuale dell'app unica Windows x64:
 
 ```bash
-dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r win-x64
+dotnet publish src/Wisegar.DTXInspector.App/Wisegar.DTXInspector.App.csproj -c Release -r win-x64
 ```
 
 Verifica delle transizioni UI, senza avviare controlli o aprire report
 (richiede un ambiente desktop):
 
 ```bash
-dotnet run --project tests/DtxNodeCheck.Desktop.Smoke
+dotnet run --project tests/Wisegar.DTXInspector.Desktop.Smoke
 ```
 
-Pubblicazione manuale delle app legacy per nodo Windows x64:
-
-```bash
-dotnet publish src/DtxNodeCheck.CoreApp/DtxNodeCheck.CoreApp.csproj -c Release -r win-x64
-dotnet publish src/DtxNodeCheck.WorkstationApp/DtxNodeCheck.WorkstationApp.csproj -c Release -r win-x64
-dotnet publish src/DtxNodeCheck.ClientApp/DtxNodeCheck.ClientApp.csproj -c Release -r win-x64
-```
-
-Tutti i progetti desktop usano per default `win-x64`, architettura `x64` e
+Il progetto desktop usa per default `win-x64`, architettura `x64` e
 runtime incluso (self-contained), anche in build Debug. La pubblicazione e'
 single-file. `-r win-x64` e' facoltativo; build e publish con un altro RID o
 con `SelfContained=false` vengono bloccati. Le impostazioni comuni sono in
@@ -195,12 +220,5 @@ con `SelfContained=false` vengono bloccati. Le impostazioni comuni sono in
 Gli eseguibili vengono generati sotto:
 
 ```text
-src/DtxNodeCheck.App/bin/Release/net10.0/win-x64/publish/
+src/Wisegar.DTXInspector.App/bin/Release/net10.0/win-x64/publish/
 ```
-
-## Exit code
-
-- `0`: controlli completati senza failure.
-- `1`: controlli completati con almeno un failure.
-- `2`: errore CLI, configurazione o I/O.
-- `3`: sistema operativo non supportato.
