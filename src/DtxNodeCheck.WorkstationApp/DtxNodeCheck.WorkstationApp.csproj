@@ -6,9 +6,6 @@
     <Nullable>enable</Nullable>
     <AssemblyName>DtxNodeCheck.Workstation</AssemblyName>
     <ApplicationManifest>..\DtxNodeCheck\app.manifest</ApplicationManifest>
-    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
-    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract Condition="'$(RuntimeIdentifier)' != ''">true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.2" />
@@ -18,9 +15,5 @@
   <ItemGroup>
     <ProjectReference Include="..\DtxNodeCheck.Core\DtxNodeCheck.Core.csproj" />
     <Compile Include="..\DtxNodeCheck.Desktop.Shared\*.cs" Link="Desktop\%(Filename)%(Extension)" />
-    <Content Include="..\..\configs\dtx-node-check-workstation.json" Link="dtx-node-check-workstation.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
   </ItemGroup>
 </Project>

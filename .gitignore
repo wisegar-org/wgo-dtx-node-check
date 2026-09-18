@@ -9,3 +9,4 @@ artifacts/node-apps/*/
 artifacts/deploy/
 artifacts/deploy-self-contained/
 artifacts/inno/
+installers/*-Setup.exe

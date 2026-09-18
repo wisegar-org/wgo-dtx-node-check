@@ -52,7 +52,7 @@ public static class NodeCheckService
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), applicationName);
 
         return new NodeCheckPaths(
-            Path.Combine(baseDir, configFileName ?? $"dtx-node-check-{node}.json"),
+            Path.Combine(baseDir, configFileName ?? "dtx-node-check.json"),
             Path.Combine(dataRoot, "Reports", $"DTX-{node}-Report.html"),
             Path.Combine(dataRoot, "Logs", $"DtxNodeCheck-{node}-debug.log"));
     }

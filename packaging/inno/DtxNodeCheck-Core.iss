@@ -32,7 +32,7 @@ Name: "{commonappdata}\{#AppName}\Logs"
 
 [Files]
 Source: "{#SourceDir}\DtxNodeCheck.CoreApp.exe"; DestDir: "{app}"; DestName: "DtxNodeCheck.exe"; Flags: ignoreversion
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "DtxNodeCheck.CoreApp.exe"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#SourceDir}\dtx-node-check.json"; DestDir: "{app}"; Flags: onlyifdoesntexist uninsneveruninstall
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\DtxNodeCheck.exe"; WorkingDir: "{app}"

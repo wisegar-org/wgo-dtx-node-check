@@ -1,15 +1,21 @@
 <Project>
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'DtxNodeCheck.App' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.CoreApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.WorkstationApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.ClientApp'">
-    <DtxNodeCheckDesktopProject>true</DtxNodeCheckDesktopProject>
-  </PropertyGroup>
+  <ItemGroup Condition="'$(DtxNodeCheckDesktopProject)' == 'true'">
+    <Content Include="$(MSBuildThisFileDirectory)configs/dtx-node-check.json" Link="dtx-node-check.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
 
-  <Target Name="RequireSelfContainedDesktopPublish" BeforeTargets="Publish" Condition="'$(DtxNodeCheckDesktopProject)' == 'true'">
+  <Target Name="RequireWindowsX64DesktopBuild" BeforeTargets="PrepareForBuild;Publish" Condition="'$(DtxNodeCheckDesktopProject)' == 'true'">
     <Error
-      Condition="'$(RuntimeIdentifier)' == ''"
-      Text="DtxNodeCheck desktop deploy must specify a RuntimeIdentifier, for example -r win-x64 or -r osx-arm64. Deploys must always be self-contained." />
+      Condition="'$(RuntimeIdentifier)' != 'win-x64' Or '$(PlatformTarget)' != 'x64'"
+      Text="DtxNodeCheck desktop builds support only Windows x64 (RuntimeIdentifier=win-x64, PlatformTarget=x64)." />
     <Error
       Condition="'$(SelfContained)' != 'true'"
-      Text="DtxNodeCheck desktop deploy must be self-contained. The project sets SelfContained=true when a RuntimeIdentifier is provided; do not override it." />
+      Text="DtxNodeCheck desktop builds must be self-contained; do not override SelfContained=true." />
+  </Target>
+
+  <Target Name="RequireSelfContainedDesktopPublish" BeforeTargets="Publish" DependsOnTargets="RequireWindowsX64DesktopBuild" Condition="'$(DtxNodeCheckDesktopProject)' == 'true'">
     <Error
       Condition="'$(PublishSingleFile)' != 'true' Or '$(IncludeNativeLibrariesForSelfExtract)' != 'true'"
       Text="DtxNodeCheck desktop deploy must be single-file and include native libraries for self extraction; do not override these publish settings." />

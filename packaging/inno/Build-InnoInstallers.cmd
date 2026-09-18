@@ -25,7 +25,7 @@ if errorlevel 1 set "DOTNET=%ProgramFiles%\dotnet\dotnet.exe"
 "%DOTNET%" publish src\DtxNodeCheck.App\DtxNodeCheck.App.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
 if errorlevel 1 goto failed
 
-if not exist artifacts\inno mkdir artifacts\inno
+if not exist installers mkdir installers
 
 "%ISCC%" packaging\inno\WgoDtxNodeCheck.iss
 if errorlevel 1 goto failed
@@ -33,7 +33,7 @@ if errorlevel 1 goto failed
 popd >nul
 
 echo.
-echo Installer generato: artifacts\inno\WgoDtxNodeCheck-Setup.exe
+echo Installer generato: installers\WgoDtxNodeCheck-Setup.exe
 exit /b 0
 
 :failed

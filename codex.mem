@@ -2,6 +2,47 @@
 
 ## Continuation on Windows - 2026-09-18
 
+### Review and commit of Windows-only unified configuration
+
+- Review includes the pending deletion of the three historical installable ZIPs
+  and six legacy CMD/PowerShell installer scripts. README updated accordingly.
+- Legacy desktop projects and Inno sources remain; generated setup stays ignored.
+- User requested reviewing and committing all pending changes.
+- Review validation: Release solution build passed with zero warnings/errors;
+  Release desktop smoke checks passed for unified and legacy role/config paths.
+
+### Installer output requested in installers
+
+- User requested compiling Inno Setup into `installers`.
+- Unified `.iss`, build script and documentation now target
+  `installers/WgoDtxNodeCheck-Setup.exe`; generated setup executables are ignored.
+- Inno Setup 6.7.3 is now installed under `C:\Program Files (x86)\Inno Setup 6`.
+- Release Windows x64 self-contained publish and Inno compilation succeeded.
+  Setup includes the executable and single unified JSON. Installation itself
+  has not been run as part of this packaging task.
+
+### Latest decision: Windows x64 only
+
+- The user limited this app to Windows x64 self-contained builds.
+- This supersedes earlier macOS/cross-platform deployment requests below.
+- `Directory.Build.props` defaults all desktop apps to `win-x64`, `x64`,
+  self-contained and single-file publishing. Duplicate project settings removed.
+- Build and publish reject other RIDs/architectures and `SelfContained=false`.
+- `-r win-x64` is now optional; a default publish targets Windows x64.
+- Desktop smoke runner also targets Windows x64 self-contained.
+- Existing macOS artifacts are historical outputs, not current release targets.
+- Subsequent user request: keep only one configuration file. Removed the three
+  per-node JSONs and duplicate example; `configs/dtx-node-check.json` is the sole
+  configuration source for every desktop app, including legacy apps. Shared
+  build targets copy it; default paths and legacy installers now use its name.
+  Existing custom configs are preserved during installation. Historical ZIPs
+  have not been regenerated; migrate any old per-node custom settings manually.
+- Verified solution build (zero warnings/errors), default publish without `-r`
+  producing Windows x64 output, and desktop smoke checks. Build validation rejects
+  macOS ARM64, Linux x64, Windows ARM64/x86, x86 PlatformTarget and SelfContained=false.
+
+### Previous continuation
+
 - Unified app remains the primary product; legacy projects remain for compatibility.
 - Default Inno build now publishes only `DtxNodeCheck.App` and uses
   `packaging/inno/WgoDtxNodeCheck.iss` to produce `WgoDtxNodeCheck-Setup.exe`.

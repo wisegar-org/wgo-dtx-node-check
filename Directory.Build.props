@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'DtxNodeCheck.App' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.CoreApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.WorkstationApp' Or '$(MSBuildProjectName)' == 'DtxNodeCheck.ClientApp'">
+    <DtxNodeCheckDesktopProject>true</DtxNodeCheckDesktopProject>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PlatformTarget>x64</PlatformTarget>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+  </PropertyGroup>
+</Project>

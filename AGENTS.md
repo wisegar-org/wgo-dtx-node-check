@@ -27,8 +27,8 @@ Supported node roles:
 - It may write report/log files only when requested by the desktop workflow or
   explicit report/log options.
 - Windows checks are Windows-only and must show a clear message outside Windows.
-- Desktop deploys must always be self-contained and single-file when published
-  for a Runtime Identifier.
+- Desktop builds must target Windows x64 (`win-x64`) and be self-contained.
+  Desktop publishes must also be single-file. Other runtime targets are unsupported.
 
 ## Current Architecture
 
@@ -44,14 +44,15 @@ Supported node roles:
 
 ## Important Files
 
-- `configs/dtx-node-check.json`: unified configuration used by the single app.
-- `configs/dtx-node-check-core.json`: legacy Core app config.
-- `configs/dtx-node-check-workstation.json`: legacy Workstation app config.
-- `configs/dtx-node-check-client.json`: legacy Client app config.
-- `Directory.Build.targets`: blocks desktop publish without Runtime Identifier
-  and without self-contained deploy.
+- `configs/dtx-node-check.json`: the only configuration source, shared by the
+  unified and legacy apps; contains common settings and all three node sections.
+  `Directory.Build.targets` copies it next to every desktop executable.
+- `Directory.Build.props`: defaults desktop builds to Windows x64, self-contained.
+- `Directory.Build.targets`: rejects other desktop targets and framework-dependent
+  builds; requires single-file publishing.
 - `packaging/inno`: Inno Setup packaging for Windows installers.
   `Build-InnoInstallers.cmd` now builds the unified `WgoDtxNodeCheck.iss` only.
+  The generated installer goes to `installers/WgoDtxNodeCheck-Setup.exe` (git-ignored).
   Existing per-node scripts remain legacy compatibility sources.
 - `README.md`: user-facing project documentation.
 - `codex.mem`: conversation and project memory.
@@ -70,14 +71,8 @@ Preferred Windows publish:
 dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r win-x64
 ```
 
-Preferred macOS ARM64 publish:
-
-```bash
-dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r osx-arm64
-```
-
-Do not publish desktop apps without `-r <RID>`. The repository intentionally
-fails such publishes.
+`-r win-x64` is optional because it is the default. Do not build or publish
+desktop apps for macOS, Linux, x86 or ARM64. Do not disable self-contained deploy.
 
 Desktop regression smoke checks (requires a desktop environment):
 
@@ -105,5 +100,5 @@ The preferred future state is a single branded app:
 - node inference at startup
 - manual override in UI
 - HTML reports opened automatically after test/inventory runs
-- self-contained deploys for Windows and macOS
+- self-contained deploys for Windows x64 only
 

@@ -34,9 +34,21 @@ internal static class Program
         }
         finally { window.Close(); }
 
-        var legacy = new MainWindow(DtxNodeRole.Core, "Legacy", null, false);
-        try { Assert(!Field<ComboBox>(legacy, "_nodeSelector").IsEnabled, "Legacy role remains fixed"); }
-        finally { legacy.Close(); }
+        foreach (var role in Enum.GetValues<DtxNodeRole>())
+        {
+            var legacy = new MainWindow(role, "Legacy", null, false);
+            try
+            {
+                Assert(!Field<ComboBox>(legacy, "_nodeSelector").IsEnabled, "Legacy role remains fixed");
+                var paths = Field<NodeCheckPaths>(legacy, "_paths");
+                Assert(Path.GetFileName(paths.ConfigPath) == "dtx-node-check.json", "Legacy defaults to unified config");
+                var checks = NodeCheckService.GetPlannedChecks(paths.ConfigPath, role);
+                Assert(checks.Count >= 2, "Every role loads successfully from the distributed config");
+                Assert(checks.Any(check => check.Category == "process" && check.Name == "DTX Studio Clinic")
+                    == (role != DtxNodeRole.Core), "Node-specific checks are preserved in unified config");
+            }
+            finally { legacy.Close(); }
+        }
         Console.WriteLine("PASS: unified desktop selection, config access, busy state, role paths and legacy compatibility.");
     }
 

@@ -26,7 +26,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Output:
 
 ```text
-artifacts\inno\WgoDtxNodeCheck-Setup.exe
+installers\WgoDtxNodeCheck-Setup.exe
 ```
 
 ## Comportamento Installer

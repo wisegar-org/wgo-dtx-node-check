@@ -44,32 +44,16 @@ se il nodo non e' ancora selezionato, altrimenti ricarica il piano del nodo.
 La selezione manuale resta valida durante la sessione.
 
 Su Windows l'eseguibile richiede privilegi amministrativi tramite UAC.
-Su macOS l'interfaccia e' disponibile, ma test e inventario sono disabilitati:
-i controlli DTX richiedono Windows. Le opzioni della CLI storica non sono
+L'app viene compilata e distribuita solo per Windows x64, con runtime incluso.
+Le opzioni della CLI storica non sono
 gestite dall'eseguibile desktop.
 
-## Pacchetti Legacy Per Nodo
+## Compatibilita' Legacy
 
-La cartella `artifacts/node-apps` puo' contenere tre pacchetti separati:
-
-- `DtxNodeCheck-Core-installable.zip`
-- `DtxNodeCheck-Workstation-installable.zip`
-- `DtxNodeCheck-Client-installable.zip`
-
-Ogni pacchetto contiene l'app Avalonia del nodo, il file di configurazione del
-nodo e un installer `Install-DtxNodeCheck-<Nodo>.cmd`. L'installer:
-
-- richiede privilegi amministrativi via UAC;
-- copia l'app in `Program Files`;
-- copia la configurazione del nodo accanto all'eseguibile;
-- crea cartelle report/log in `ProgramData`;
-- crea shortcut su Desktop e Start Menu;
-- lo shortcut apre una finestra unica con log interattivo dei controlli;
-- dalla finestra e' possibile eseguire test o inventario;
-- dalla finestra e' possibile aprire e ricaricare il file JSON di configurazione;
-- dalla finestra e' possibile consultare i dati applicativi tramite `About`;
-- dalla finestra e' possibile aprire fonti ufficiali di supporto e documentazione;
-- al termine viene generato un report HTML e aperto automaticamente.
+I vecchi ZIP e gli script di installazione CMD/PowerShell per nodo sono stati
+rimossi. Usare l'installer unico descritto sotto. I progetti desktop legacy e
+i relativi sorgenti Inno restano disponibili per compatibilita'; anche queste
+app usano `dtx-node-check.json`, con tutte e tre le sezioni nodo.
 
 ## Fonti Ufficiali
 
@@ -98,7 +82,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-artifacts\inno\WgoDtxNodeCheck-Setup.exe
+installers\WgoDtxNodeCheck-Setup.exe
 ```
 
 L'installer installa in `Program Files\WGO DTX Node Check`, richiede privilegi
@@ -141,8 +125,10 @@ Un unico file JSON contiene impostazioni comuni e impostazioni specifiche per
 nodo. L'app unica usa `dtx-node-check.json`; le impostazioni `common` vengono
 unite a quelle del nodo selezionato o inferito.
 
-Vedi [examples/dtx-node-check.example.json](examples/dtx-node-check.example.json).
-La configurazione distribuita e' [configs/dtx-node-check.json](configs/dtx-node-check.json).
+L'unico file da mantenere e' [configs/dtx-node-check.json](configs/dtx-node-check.json),
+copiato accanto all'eseguibile in build e pubblicazione, anche per le app legacy.
+`common` contiene i controlli condivisi; `nodes.core`, `nodes.workstation` e
+`nodes.client` contengono quelli specifici. Cambiare nodo non cambia file.
 E' un punto di partenza: aggiungere controlli specifici dell'installazione.
 Workstation e Client hanno inizialmente segnali simili, quindi il rilevamento
 puo' richiedere la selezione manuale. L'app seleziona automaticamente un nodo
@@ -185,12 +171,6 @@ Pubblicazione manuale dell'app unica Windows x64:
 dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r win-x64
 ```
 
-Pubblicazione macOS ARM64 (interfaccia, controlli disponibili solo su Windows):
-
-```bash
-dotnet publish src/DtxNodeCheck.App/DtxNodeCheck.App.csproj -c Release -r osx-arm64
-```
-
 Verifica delle transizioni UI, senza avviare controlli o aprire report
 (richiede un ambiente desktop):
 
@@ -206,9 +186,11 @@ dotnet publish src/DtxNodeCheck.WorkstationApp/DtxNodeCheck.WorkstationApp.cspro
 dotnet publish src/DtxNodeCheck.ClientApp/DtxNodeCheck.ClientApp.csproj -c Release -r win-x64
 ```
 
-Quando viene indicato un Runtime Identifier, tutti i progetti desktop pubblicano
-sempre output self-contained e single-file. Un publish desktop senza Runtime
-Identifier viene bloccato.
+Tutti i progetti desktop usano per default `win-x64`, architettura `x64` e
+runtime incluso (self-contained), anche in build Debug. La pubblicazione e'
+single-file. `-r win-x64` e' facoltativo; build e publish con un altro RID o
+con `SelfContained=false` vengono bloccati. Le impostazioni comuni sono in
+`Directory.Build.props`, i vincoli in `Directory.Build.targets`.
 
 Gli eseguibili vengono generati sotto:
 
