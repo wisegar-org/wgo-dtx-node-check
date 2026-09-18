@@ -182,10 +182,13 @@ dotnet build
 Pubblicazione manuale delle tre app Windows x64:
 
 ```bash
-dotnet publish src/DtxNodeCheck.CoreApp/DtxNodeCheck.CoreApp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
-dotnet publish src/DtxNodeCheck.WorkstationApp/DtxNodeCheck.WorkstationApp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
-dotnet publish src/DtxNodeCheck.ClientApp/DtxNodeCheck.ClientApp.csproj -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+dotnet publish src/DtxNodeCheck.CoreApp/DtxNodeCheck.CoreApp.csproj -c Release -r win-x64
+dotnet publish src/DtxNodeCheck.WorkstationApp/DtxNodeCheck.WorkstationApp.csproj -c Release -r win-x64
+dotnet publish src/DtxNodeCheck.ClientApp/DtxNodeCheck.ClientApp.csproj -c Release -r win-x64
 ```
+
+Quando viene indicato un Runtime Identifier, i tre progetti desktop pubblicano
+sempre output self-contained e single-file.
 
 Gli eseguibili vengono generati sotto:
 
