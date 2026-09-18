@@ -1,479 +1,208 @@
 using System.Diagnostics;
 using System.Reflection;
-using System.Text;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Wisegar.DTXInspector.Core;
 
 namespace Wisegar.DTXInspector.Desktop;
 
 public sealed class MainWindow : Window
 {
-    private static readonly DtxNodeRole[] NodeRoles =
-    [
-        DtxNodeRole.Core,
-        DtxNodeRole.Workstation,
-        DtxNodeRole.Client
+    private readonly NodeWorkspace[] _workspaces = [
+        new(DtxNodeRole.Core), new(DtxNodeRole.Workstation), new(DtxNodeRole.Client), new(null)
     ];
-
-    private static readonly OfficialLink[] OfficialLinks =
-    [
-        new("Supporto", "https://www.dtxstudio.com/en-us/support"),
-        new("DTX Studio Go", "https://www.dtxstudio.com/en-us/dtx-studio-go"),
-        new("Help e IFU", "https://helpfiles.dtxstudio.com/"),
-        new("Installazione", "https://helpfiles.dtxstudio.com/Help/50784413-8047-4699-82f7-d1e9a868909e/4.1/EN/Installation_and_updates.htm")
-    ];
-
-    private readonly string _applicationName = AppSettings.ApplicationName;
-    private readonly string _configFileName = AppSettings.ConfigFileName;
-    private DtxNodeRole? _nodeRole;
-    private NodeCheckPaths? _paths;
-    private readonly TextBlock _subtitle;
-    private readonly TextBlock _status;
-    private readonly TextBox _log;
-    private readonly ProgressBar _progress;
-    private readonly ComboBox _nodeSelector;
-    private readonly Button _runButton;
-    private readonly Button _inventoryButton;
-    private readonly Button _inspectButton;
-    private readonly Button _openReportButton;
-    private readonly MenuItem _openConfigButton;
-    private readonly MenuItem _reloadConfigButton;
-    private readonly MenuItem _inventorySettingsButton;
-    private readonly MenuItem _aboutButton;
-    private string? _lastReportPath;
-    private bool _updatingNodeSelector;
+    private readonly TabControl _tabs = new ManualTabControl();
+    private readonly Button _runButton = new() { Content = "Esegui test" };
+    private readonly Button _inspectButton = new() { Content = "Ispeziona DTX" };
+    private readonly Button _inventoryButton = new() { Content = "Ispeziona PC" };
+    private readonly Button _configureButton = new() { Content = "Configura nodo…" };
+    private readonly Button _openReportButton = new() { Content = "Apri report" };
+    private readonly Button _cancelButton = new() { Content = "Interrompi", IsVisible = false };
+    private readonly MenuItem _openConfigButton = new() { Header = "Apri appsettings.json" };
+    private readonly MenuItem _reloadConfigButton = new() { Header = "Ricarica piano" };
+    private readonly MenuItem _inventorySettingsButton = new() { Header = "Impostazioni da inventario…" };
+    private readonly TextBlock _status = new() { Text = "Seleziona un tab per iniziare. Nessun nodo viene scelto automaticamente.", TextWrapping = TextWrapping.Wrap };
+    private bool _busy;
+    private CancellationTokenSource? _cancellation;
+    private NodeWorkspace? Current => _tabs.SelectedIndex >= 0 ? _workspaces[_tabs.SelectedIndex] : null;
+    private static string ConfigPath => NodeCheckService.CreateDefaultConfigPath(AppSettings.ConfigFileName);
 
     public MainWindow()
     {
-        Title = _applicationName;
-        Width = 980;
-        Height = 720;
-        MinWidth = 760;
-        MinHeight = 560;
-
-        var title = new TextBlock
+        Title = AppSettings.ApplicationName;
+        Width = 1100; Height = 820; MinWidth = 800; MinHeight = 620;
+        var configMenu = new MenuItem { Header = "_Configurazione", ItemsSource = new Control[] {
+            _openConfigButton, _reloadConfigButton, new Separator(), _inventorySettingsButton
+        } };
+        var docs = new MenuItem { Header = "_Documentazione" };
+        foreach (var (label, url) in new[] {
+            ("Supporto", "https://www.dtxstudio.com/en-us/support"),
+            ("DTX Studio Go", "https://www.dtxstudio.com/en-us/dtx-studio-go"),
+            ("Help e IFU", "https://helpfiles.dtxstudio.com/"),
+            ("Installazione", "https://helpfiles.dtxstudio.com/Help/50784413-8047-4699-82f7-d1e9a868909e/4.1/EN/Installation_and_updates.htm")
+        })
         {
-            Text = _applicationName,
-            FontSize = 24,
-            FontWeight = FontWeight.SemiBold,
-            Margin = new Thickness(0, 0, 0, 4)
-        };
-
-        _subtitle = new TextBlock
-        {
-            Foreground = Brushes.DimGray,
-            TextWrapping = TextWrapping.Wrap
-        };
-        UpdateSubtitle();
-
-        _status = new TextBlock
-        {
-            Text = OperatingSystem.IsWindows()
-                ? "Seleziona Core, Workstation o Client per eseguire i controlli."
-                : "Controlli disponibili solo su Windows.",
-            Margin = new Thickness(0, 14, 0, 8)
-        };
-
-        _progress = new ProgressBar
-        {
-            Minimum = 0,
-            Maximum = 1,
-            Value = 0,
-            Height = 10
-        };
-
-        _log = new TextBox
-        {
-            IsReadOnly = true,
-            AcceptsReturn = true,
-            TextWrapping = TextWrapping.NoWrap,
-            FontFamily = FontFamily.Parse("Consolas, Menlo, monospace"),
-            Text = ""
-        };
-        ScrollViewer.SetVerticalScrollBarVisibility(_log, ScrollBarVisibility.Auto);
-        ScrollViewer.SetHorizontalScrollBarVisibility(_log, ScrollBarVisibility.Auto);
-
-        _nodeSelector = new ComboBox
-        {
-            MinWidth = 170,
-            ItemsSource = NodeRoles.Select(role => role.ToString()).ToArray(),
-            PlaceholderText = "Seleziona nodo"
-        };
-        _nodeSelector.SelectionChanged += (_, _) => SelectNodeFromUi();
-
-        _runButton = CreateToolbarButton("Esegui test", "Avvia i controlli sul nodo selezionato", "M 3,2 L 14,8 L 3,14 Z");
-        _runButton.Click += async (_, _) => await RunChecksAsync();
-
-        _inventoryButton = CreateToolbarButton("Inventario PC", "Rileva i componenti del PC", "M 1,1 H 15 V 11 H 9 V 13 H 12 V 15 H 4 V 13 H 7 V 11 H 1 Z M 3,3 V 9 H 13 V 3 Z");
-        _inventoryButton.Click += async (_, _) => await RunInventoryAsync();
-
-        _inspectButton = CreateToolbarButton("Ispeziona DTX", "Servizi, processi, porte TCP con PID, IP e DNS del nodo",
-            "M 6,1 A 5,5 0 1 0 6,11 A 5,5 0 0 0 6,1 Z M 6,3 A 3,3 0 1 1 6,9 A 3,3 0 0 1 6,3 Z M 10,9 L 15,14 L 13,16 L 8,11 Z");
-        _inspectButton.Click += async (_, _) => await RunChecksAsync(inspectDtx: true);
-
-        _openReportButton = CreateToolbarButton("Apri report", "Apri l’ultimo report generato", "M 3,1 H 10 L 14,5 V 15 H 3 Z M 5,7 V 8 H 12 V 7 Z M 5,10 V 11 H 12 V 10 Z");
-        _openReportButton.IsEnabled = false;
-        _openReportButton.Click += (_, _) => OpenLastReport();
-
-        _openConfigButton = new MenuItem { Header = "_Apri config" };
-        _openConfigButton.Click += (_, _) => OpenConfigFile();
-
-        _reloadConfigButton = new MenuItem { Header = "_Ricarica config" };
-        _reloadConfigButton.Click += (_, _) => ReloadPlan();
-
-        _aboutButton = new MenuItem { Header = "_Informazioni su WGO DTX Inspector" };
-        _aboutButton.Click += async (_, _) => await ShowAboutAsync();
-
-        _inventorySettingsButton = new MenuItem { Header = "_Impostazioni da inventario..." };
-        ToolTip.SetTip(_inventorySettingsButton, "Seleziona un nodo per generarne le impostazioni dai componenti DTX locali.");
-        _inventorySettingsButton.Click += async (_, _) => await LoadInventorySettingsAsync();
-
-        var configMenu = new MenuItem
-        {
-            Header = "_Configurazione",
-            ItemsSource = new Control[] { _openConfigButton, _reloadConfigButton, new Separator(), _inventorySettingsButton }
-        };
-        var helpMenu = new MenuItem
-        {
-            Header = "_Aiuto",
-            ItemsSource = new Control[] { CreateDocumentationMenu(), new Separator(), _aboutButton }
-        };
-        var menu = new Menu { ItemsSource = new[] { configMenu, helpMenu }, VerticalAlignment = VerticalAlignment.Center };
-        ToolTip.SetTip(configMenu, "Apri, ricarica o genera le impostazioni del nodo");
-        ToolTip.SetTip(helpMenu, "Documentazione ufficiale e informazioni sull’app");
-        ToolTip.SetTip(_nodeSelector, "Scegli il ruolo del nodo da controllare");
-        Avalonia.Automation.AutomationProperties.SetName(_nodeSelector, "Nodo da controllare");
-
-        var toolbar = new WrapPanel
-        {
-            Name = "MainToolbar",
-            Orientation = Orientation.Horizontal,
-            Children = { _nodeSelector, _runButton, _inspectButton, _inventoryButton, _openReportButton, menu }
-        };
-        foreach (var control in toolbar.Children)
-        {
-            control.Margin = new Thickness(0, 3, 8, 3);
-            control.VerticalAlignment = VerticalAlignment.Center;
+            var item = new MenuItem { Header = label }; item.Click += (_, _) => OpenFile(url); docs.Items.Add(item);
         }
-        var toolbarBorder = new Border
-        {
-            Child = toolbar,
-            BorderBrush = Brushes.LightGray,
-            BorderThickness = new Thickness(0, 1, 0, 1),
-            Padding = new Thickness(0, 5),
-            Margin = new Thickness(0, 12, 0, 8)
+        var about = new MenuItem { Header = "_Informazioni" };
+        about.Click += async (_, _) => await ShowMessageAsync("Informazioni", $"{AppSettings.ApplicationName}\nVersione {typeof(MainWindow).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}\nWindows x64 · self-contained\n\nControlli in sola lettura. DNS/TCP sui target configurati solo durante test richiesti, con timeout.\n\nConfigurazione: {ConfigPath}");
+        var log = new MenuItem { Header = "Apri log completo del tab" };
+        log.Click += (_, _) => { if (Current?.LogPath is { } path) OpenFile(path); };
+        var help = new MenuItem { Header = "_Aiuto", ItemsSource = new Control[] { docs, log, about } };
+        var toolbar = new WrapPanel { Name = "MainToolbar", Children = {
+            _configureButton, _runButton, _inspectButton, _inventoryButton, _openReportButton, _cancelButton,
+            new Menu { ItemsSource = new[] { configMenu, help } }
+        } };
+        foreach (var control in toolbar.Children) { control.Margin = new Thickness(0, 4, 8, 4); control.VerticalAlignment = VerticalAlignment.Center; }
+        _tabs.ItemsSource = _workspaces.Select(x => new TabItem { Header = x.Label, Content = x }).ToArray();
+        _tabs.SelectedIndex = -1;
+        _tabs.SelectionChanged += (_, e) => {
+            if (!ReferenceEquals(e.Source, _tabs)) return;
+            if (Current is { Role: not null, Results.Count: 0 } workspace) LoadPlan(workspace);
+            UpdateControls();
         };
-
-        var layout = new Grid
-        {
-            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*"),
-            Margin = new Thickness(18)
-        };
-        layout.Children.Add(new StackPanel { Children = { title, _subtitle } });
-        Grid.SetRow(toolbarBorder, 1);
-        layout.Children.Add(toolbarBorder);
-        Grid.SetRow(_status, 2);
-        layout.Children.Add(_status);
-        Grid.SetRow(_progress, 3);
-        _progress.Margin = new Thickness(0, 0, 0, 10);
-        layout.Children.Add(_progress);
-        Grid.SetRow(_log, 4);
-        layout.Children.Add(_log);
-
-        Content = layout;
-        UpdateControlsForNode();
-        Opened += (_, _) => { if (_nodeRole is null) RequestNodeSelection(); };
+        _runButton.Click += async (_, _) => await RunAsync(false, false);
+        _inspectButton.Click += async (_, _) => await RunAsync(true, false);
+        _inventoryButton.Click += async (_, _) => await RunAsync(false, true);
+        _cancelButton.Click += (_, _) => { _cancellation?.Cancel(); _cancelButton.IsEnabled = false; _status.Text = "Interruzione richiesta; attendo la fine della lettura locale in corso."; };
+        _configureButton.Click += async (_, _) => await ConfigureAsync();
+        _openReportButton.Click += (_, _) => { if (Current?.ReportPath is { } path) OpenFile(path); };
+        _openConfigButton.Click += (_, _) => OpenFile(ConfigPath);
+        _reloadConfigButton.Click += (_, _) => { if (Current is { Role: not null } workspace) LoadPlan(workspace); };
+        _inventorySettingsButton.Click += async (_, _) => await ImportAsync();
+        var grid = new Grid { Margin = new Thickness(18), RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*") };
+        grid.Children.Add(new TextBlock { Text = AppSettings.ApplicationName, FontSize = 24, FontWeight = FontWeight.SemiBold });
+        Grid.SetRow(toolbar, 1); grid.Children.Add(toolbar);
+        _status.Margin = new Thickness(0, 5, 0, 12); Grid.SetRow(_status, 2); grid.Children.Add(_status);
+        Grid.SetRow(_tabs, 3); grid.Children.Add(_tabs);
+        Content = grid;
+        Closing += (_, e) => { if (_busy) { e.Cancel = true; _status.Text = "Attendere il completamento oppure interrompere il test prima di chiudere."; } };
+        UpdateControls();
     }
 
-    private static Button CreateToolbarButton(string label, string tooltip, string geometry)
+    private void UpdateControls()
     {
-        var button = new Button
-        {
-            Padding = new Thickness(10, 7),
-            Content = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Spacing = 7,
-                Children =
-                {
-                    new PathIcon { Data = Geometry.Parse(geometry), Width = 16, Height = 16 },
-                    new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center }
-                }
-            }
-        };
-        ToolTip.SetTip(button, tooltip);
-        Avalonia.Automation.AutomationProperties.SetName(button, label);
-        return button;
+        var selected = Current;
+        _runButton.IsVisible = _inspectButton.IsVisible = _configureButton.IsVisible = selected?.Role is not null || selected is null;
+        _inventoryButton.IsVisible = selected is { Role: null };
+        _runButton.IsEnabled = _inspectButton.IsEnabled = _configureButton.IsEnabled = !_busy && selected?.Role is not null;
+        _inventoryButton.IsEnabled = !_busy && selected is { Role: null };
+        _inventorySettingsButton.IsEnabled = !_busy && selected?.Role is not null;
+        _openConfigButton.IsEnabled = _reloadConfigButton.IsEnabled = !_busy;
+        _openReportButton.IsEnabled = selected?.ReportPath is not null;
+        if (!_busy) _status.Text = selected is null ? "Seleziona Core, Workstation, Client o Ispezione PC." : $"{selected.Label} · {Environment.MachineName}";
     }
 
-    private MenuItem CreateDocumentationMenu()
+    private void LoadPlan(NodeWorkspace workspace)
     {
-        var menu = new MenuItem { Header = "_Documentazione" };
-        foreach (var officialLink in OfficialLinks)
-        {
-            var item = new MenuItem { Header = officialLink.Label };
-            ToolTip.SetTip(item, officialLink.Url);
-            item.Click += (_, _) => OpenOfficialLink(officialLink);
-            menu.Items.Add(item);
-        }
-        return menu;
+        if (workspace.Role is not { } role) return;
+        try { workspace.SetResults(NodeCheckService.GetPlannedChecks(ConfigPath, role)); workspace.Status.Text = "Piano caricato · controlli non ancora eseguiti con queste impostazioni"; }
+        catch (Exception ex) { workspace.Status.Text = ex.Message; }
     }
 
-    private void ReloadPlan()
+    private async Task RunAsync(bool inspect, bool inventory)
     {
-        if (_nodeRole is null) { RequestNodeSelection(); return; }
-        _log.Text = "";
-        LoadPlan();
-    }
-
-    private void RequestNodeSelection()
-    {
-        _status.Text = "Seleziona Core, Workstation o Client per eseguire i controlli.";
-        UpdateControlsForNode();
-        _nodeSelector.Focus();
-        _nodeSelector.IsDropDownOpen = true;
-    }
-
-    private void SelectNodeFromUi()
-    {
-        if (_updatingNodeSelector)
-        {
-            return;
-        }
-
-        if (_nodeSelector.SelectedIndex < 0 || _nodeSelector.SelectedIndex >= NodeRoles.Length)
-        {
-            _nodeRole = null;
-            _paths = null;
-            _lastReportPath = null;
-            _openReportButton.IsEnabled = false;
-            _log.Text = "";
-            UpdateSubtitle();
-            RequestNodeSelection();
-            return;
-        }
-
-        SetNodeRole(NodeRoles[_nodeSelector.SelectedIndex], $"Nodo selezionato manualmente: {NodeRoles[_nodeSelector.SelectedIndex]}.", reloadPlan: true);
-    }
-
-    private void SetNodeRole(DtxNodeRole role, string status, bool reloadPlan)
-    {
-        _nodeRole = role;
-        _paths = NodeCheckService.CreateDefaultPaths(role, _applicationName, _configFileName);
-        _lastReportPath = null;
-        _openReportButton.IsEnabled = false;
-        var index = Array.IndexOf(NodeRoles, role);
-        if (_nodeSelector.SelectedIndex != index)
-        {
-            _updatingNodeSelector = true;
-            try
-            {
-                _nodeSelector.SelectedIndex = index;
-            }
-            finally
-            {
-                _updatingNodeSelector = false;
-            }
-        }
-
-        UpdateSubtitle();
-        UpdateControlsForNode();
-        _status.Text = status;
-        if (reloadPlan)
-        {
-            LoadPlan();
-        }
-    }
-
-    private void UpdateSubtitle()
-    {
-        var node = _nodeRole?.ToString() ?? "da selezionare";
-        var config = _paths?.ConfigPath ?? NodeCheckService.CreateDefaultConfigPath(_configFileName ?? "appsettings.json");
-        _subtitle.Text = $"Nodo: {node}  |  Config: {config}";
-    }
-
-    private void UpdateControlsForNode()
-    {
-        var hasNode = _nodeRole is not null && _paths is not null;
-        _runButton.IsEnabled = hasNode && OperatingSystem.IsWindows();
-        _inspectButton.IsEnabled = hasNode && OperatingSystem.IsWindows();
-        _inventorySettingsButton.IsEnabled = hasNode && OperatingSystem.IsWindows();
-        _inventoryButton.IsEnabled = OperatingSystem.IsWindows();
-        _openConfigButton.IsEnabled = true;
-        _reloadConfigButton.IsEnabled = true;
-    }
-
-    private void LoadPlan()
-    {
-        AppendLine("Piano controlli");
-        AppendLine("===============");
-        if (_nodeRole is null || _paths is null)
-        {
-            AppendLine("[INFO] nodo - Seleziona un nodo per caricare il piano controlli.");
-            return;
-        }
-
-        AppendLine($"[INFO] config - Lettura file: {_paths.ConfigPath}");
-
-        if (!OperatingSystem.IsWindows())
-        {
-            AppendLine("Questa applicazione puo' mostrare l'interfaccia su piu' piattaforme, ma i controlli DTX sono Windows-only.");
-            return;
-        }
-
+        var origin = Current;
+        if (_busy || origin is null || (!inventory && origin.Role is null) || (inventory && origin.Role is not null)) return;
+        _busy = true; UpdateControls();
+        origin.Progress.IsVisible = origin.Progress.IsIndeterminate = true;
+        _cancellation = new CancellationTokenSource();
+        _cancelButton.IsVisible = true; _cancelButton.IsEnabled = true;
+        _status.Text = $"{origin.Label}: operazione in corso. Puoi consultare gli altri tab.";
+        var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), AppSettings.ApplicationName);
+        var progress = new UiProgress(activity => origin.AddActivity(activity));
         try
         {
-            foreach (var item in NodeCheckService.GetPlannedChecks(_paths.ConfigPath, _nodeRole.Value))
+            if (!inventory) LoadPlan(origin);
+            origin.AddActivity(new(DateTimeOffset.Now, "INFO", origin.Label, inventory ? "Lettura locale, senza prove di rete" : "Avvio controlli e prove DNS/TCP con timeout"));
+            NodeCheckExecutionResult result;
+            if (inventory)
+                result = await Task.Run(() => NodeCheckService.RunInventory(Path.Combine(root, "Reports", "PC-Inventory.html"),
+                    Path.Combine(root, "Logs", "PC-Inventory.log"), true, progress, _cancellation.Token));
+            else
             {
-                AppendLine($"[PENDING] {item.Category} - {item.Name}: {item.Message}");
+                var role = origin.Role!.Value;
+                var paths = NodeCheckService.CreateDefaultPaths(role, AppSettings.ApplicationName);
+                var token = _cancellation!.Token;
+                result = await Task.Run(() => NodeCheckService.RunCheck(paths.ConfigPath, role, paths.ReportPath, paths.LogPath, true, inspect, progress, token));
             }
+            // Flush progress queued by the worker before publishing the final status.
+            await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+            origin.Complete(result);
         }
         catch (Exception ex)
         {
-            AppendLine($"[ERROR] Impossibile caricare il piano controlli: {ex.Message}");
-        }
-    }
-
-    private async Task RunChecksAsync(bool inspectDtx = false)
-    {
-        SetBusy(true, inspectDtx ? "Ispezione servizi, porte, IP e DNS DTX..." : "Esecuzione controlli...");
-        if (_nodeRole is null || _paths is null)
-        {
-            AppendLine("[ERROR] nodo - Nodo non selezionato.");
-            SetBusy(false, "Seleziona Core, Workstation o Client.");
-            RequestNodeSelection();
-            return;
-        }
-
-        _progress.Value = 0;
-        _lastReportPath = _paths.ReportPath;
-        _openReportButton.IsEnabled = false;
-
-        try
-        {
-            var planned = NodeCheckService.GetPlannedChecks(_paths.ConfigPath, _nodeRole.Value);
-            AppendLine($"[INFO] config - Rilettura file prima dell'esecuzione: {_paths.ConfigPath}");
-            AppendLine("[INFO] rete - Prove DNS/TCP sui target configurati, con timeout per tentativo. Report separato per nodo e PC.");
-            _progress.Maximum = Math.Max(planned.Count + 1, 1);
-            var index = 0;
-            foreach (var item in planned)
-            {
-                AppendLine($"[RUNNING] {item.Category} - {item.Name}");
-                _progress.Value = ++index;
-                await Task.Delay(60);
-            }
-
-            var result = await Task.Run(() => NodeCheckService.RunCheck(_paths.ConfigPath, _nodeRole.Value, _paths.ReportPath, _paths.LogPath,
-                openReport: true, inspectDtx: inspectDtx));
-            _progress.Value = _progress.Maximum;
-            AppendLine("");
-            AppendLine("Risultati");
-            AppendLine("=========");
-            foreach (var item in result.Items)
-            {
-                AppendLine($"[{item.Status.ToUpperInvariant()}] {item.Category} - {item.Name}: {item.Message}");
-            }
-
-            _lastReportPath = result.ReportPath;
-            _openReportButton.IsEnabled = true;
-            _status.Text = result.ExitCode == 0 && result.Items.All(item => item.Status != "Warning")
-                ? $"Completato. Report: {result.ReportPath}"
-                : $"Completato con segnalazioni o requisiti non verificati. Report: {result.ReportPath}";
-        }
-        catch (Exception ex)
-        {
-            AppendLine($"[ERROR] {ex}");
-            _status.Text = ex.Message;
+            origin.AddActivity(new(DateTimeOffset.Now, "ERROR", origin.Label, ex.Message, ex.ToString()));
+            origin.Status.Text = $"Esecuzione non completata: {ex.Message}";
         }
         finally
         {
-            SetBusy(false, _status.Text ?? "Pronto.");
+            origin.Progress.IsVisible = origin.Progress.IsIndeterminate = false;
+            _cancellation?.Dispose(); _cancellation = null; _busy = false; _cancelButton.IsVisible = false;
+            UpdateControls();
         }
     }
 
-    private async Task RunInventoryAsync()
+    private async Task ConfigureAsync()
     {
-        SetBusy(true, "Esecuzione inventario...");
-        var paths = _paths ?? NodeCheckService.CreateDefaultPaths(DtxNodeRole.Client, _applicationName, _configFileName);
-        _progress.Maximum = 1;
-        _progress.Value = 0;
-
+        if (_busy || Current?.Role is not { } role) return;
+        var origin = Current;
+        _busy = true; UpdateControls();
+        bool run = false;
         try
         {
-            var reportPath = Path.Combine(Path.GetDirectoryName(paths.ReportPath) ?? AppContext.BaseDirectory, "DTX-Inventory.html");
-            var logPath = Path.Combine(Path.GetDirectoryName(paths.LogPath) ?? AppContext.BaseDirectory, "Wisegar.DTXInspector-Inventory-debug.log");
-            AppendLine("[RUNNING] inventory - PC Inventory");
-            var result = await Task.Run(() => NodeCheckService.RunInventory(reportPath, logPath, openReport: true));
-            _progress.Value = 1;
-            _lastReportPath = result.ReportPath;
-            _openReportButton.IsEnabled = true;
-            AppendLine($"[PASS] inventory - Report: {result.ReportPath}");
-            _status.Text = $"Inventario completato. Report: {result.ReportPath}";
+            var wizard = new ConfigurationWizard(ConfigPath, role);
+            var outcome = await wizard.ShowDialog<int>(this);
+            if (outcome > 0) { LoadPlan(origin); origin.AddActivity(new(DateTimeOffset.Now, "INFO", "Configurazione", $"Salvata. Backup: {wizard.BackupPath}")); }
+            run = outcome == 2;
         }
-        catch (Exception ex)
-        {
-            AppendLine($"[ERROR] {ex}");
-            _status.Text = ex.Message;
-        }
-        finally
-        {
-            SetBusy(false, _status.Text ?? "Pronto.");
-        }
+        catch (Exception ex) { await ShowMessageAsync("Configurazione", ex.Message); }
+        finally { _busy = false; UpdateControls(); }
+        if (run) await RunAsync(false, false);
     }
 
-    private void SetBusy(bool busy, string status)
+    private async Task ImportAsync()
     {
-        UpdateControlsForNode();
-        _runButton.IsEnabled &= !busy;
-        _inspectButton.IsEnabled &= !busy;
-        _inventoryButton.IsEnabled &= !busy;
-        _inventorySettingsButton.IsEnabled &= !busy;
-        _nodeSelector.IsEnabled = !busy;
-        _openConfigButton.IsEnabled &= !busy;
-        _reloadConfigButton.IsEnabled &= !busy;
-        _aboutButton.IsEnabled = !busy;
-        _status.Text = status;
-    }
-
-    private async Task LoadInventorySettingsAsync()
-    {
-        if (_nodeRole is not { } role || _paths is not { } paths)
-        {
-            RequestNodeSelection();
-            return;
-        }
-        var previousStatus = _status.Text ?? "Pronto.";
-        SetBusy(true, "Conferma caricamento impostazioni...");
+        if (_busy || Current?.Role is not { } role) return;
+        var origin = Current;
+        _busy = true; UpdateControls();
         try
         {
-            var dialog = CreateInventorySettingsConfirmation(role, paths.ConfigPath);
-            if (!await dialog.ShowDialog<bool>(this))
-            {
-                _status.Text = previousStatus;
-                return;
-            }
-            _status.Text = "Generazione impostazioni dall'inventario locale...";
-            var backup = await Task.Run(() => NodeCheckService.LoadSettingsFromInventory(paths.ConfigPath, role));
-            _lastReportPath = null;
-            _openReportButton.IsEnabled = false;
-            ReloadPlan();
-            AppendLine($"[INFO] config - Impostazioni {role} caricate dall'inventario del PC.");
-            if (backup is not null) AppendLine($"[INFO] config - Copia precedente: {backup}");
-            _status.Text = "Impostazioni caricate. Verifica i controlli generati prima di eseguire i test.";
+            if (!await CreateInventorySettingsConfirmation(role, ConfigPath).ShowDialog<bool>(this)) return;
+            var backup = await Task.Run(() => NodeCheckService.LoadSettingsFromInventory(ConfigPath, role));
+            LoadPlan(origin);
+            origin.AddActivity(new(DateTimeOffset.Now, "INFO", "Configurazione", $"Importazione completata. Backup: {backup}"));
         }
-        catch (Exception ex)
-        {
-            AppendLine($"[ERROR] config - {ex.Message}");
-            _status.Text = $"Impossibile caricare le impostazioni: {ex.Message}";
-        }
-        finally
-        {
-            SetBusy(false, _status.Text ?? previousStatus);
-        }
+        catch (Exception ex) { await ShowMessageAsync("Importazione", ex.Message); }
+        finally { _busy = false; UpdateControls(); }
+    }
+
+    private void OpenFile(string path)
+    {
+        try { Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }); }
+        catch (Exception ex) { _status.Text = ex.Message; }
+    }
+
+    private async Task ShowMessageAsync(string title, string text)
+    {
+        var dialog = new Window { Title = title, Width = 580, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var close = new Button { Content = "Chiudi", IsDefault = true, IsCancel = true };
+        close.Click += (_, _) => dialog.Close();
+        dialog.Content = new StackPanel { Margin = new Thickness(20), Spacing = 15, Children = { new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap }, close } };
+        await dialog.ShowDialog(this);
+    }
+
+    private sealed class UiProgress(Action<NodeActivity> callback) : IProgress<NodeActivity>
+    {
+        public void Report(NodeActivity value) => Dispatcher.UIThread.Post(() => callback(value));
+    }
+
+    private sealed class ManualTabControl : TabControl
+    {
+        public ManualTabControl() { SelectionMode = SelectionMode.Single; SelectedIndex = -1; }
     }
 
     private static Window CreateInventorySettingsConfirmation(DtxNodeRole role, string configPath)
@@ -516,180 +245,5 @@ public sealed class MainWindow : Window
         return dialog;
     }
 
-    private async Task ShowAboutAsync()
-    {
-        var assembly = typeof(MainWindow).Assembly;
-        var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? assembly.GetName().Version?.ToString()
-            ?? "n/a";
 
-        var dialog = new Window
-        {
-            Title = $"About {_applicationName}",
-            Width = 620,
-            Height = 520,
-            MinWidth = 520,
-            MinHeight = 420,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            CanResize = true
-        };
-
-        var heading = new TextBlock
-        {
-            Text = _applicationName,
-            FontSize = 22,
-            FontWeight = FontWeight.SemiBold,
-            Margin = new Thickness(0, 0, 0, 4)
-        };
-
-        var description = new TextBlock
-        {
-            Text = "Controlli infrastrutturali e inventario DTX Studio Clinic",
-            Foreground = Brushes.DimGray,
-            Margin = new Thickness(0, 0, 0, 14)
-        };
-
-        var details = new TextBox
-        {
-            IsReadOnly = true,
-            AcceptsReturn = true,
-            TextWrapping = TextWrapping.Wrap,
-            FontFamily = FontFamily.Parse("Consolas, Menlo, monospace"),
-            Text = BuildAboutText(version)
-        };
-        ScrollViewer.SetVerticalScrollBarVisibility(details, ScrollBarVisibility.Auto);
-        ScrollViewer.SetHorizontalScrollBarVisibility(details, ScrollBarVisibility.Disabled);
-
-        var closeButton = new Button
-        {
-            Content = "Chiudi",
-            MinWidth = 96,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 12, 0, 0)
-        };
-        closeButton.Click += (_, _) => dialog.Close();
-
-        var layout = new Grid
-        {
-            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
-            Margin = new Thickness(18)
-        };
-
-        layout.Children.Add(new StackPanel { Children = { heading, description } });
-        Grid.SetRow(details, 1);
-        layout.Children.Add(details);
-        Grid.SetRow(closeButton, 2);
-        layout.Children.Add(closeButton);
-
-        dialog.Content = layout;
-        await dialog.ShowDialog(this);
-    }
-
-    private string BuildAboutText(string version)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine("Applicazione");
-        builder.AppendLine("============");
-        builder.AppendLine($"Nome: {_applicationName}");
-        builder.AppendLine($"Nodo: {_nodeRole?.ToString() ?? "da selezionare"}");
-        builder.AppendLine($"Versione: {version}");
-        builder.AppendLine($"Assembly: {typeof(MainWindow).Assembly.GetName().Name}");
-        builder.AppendLine($"Base directory: {AppContext.BaseDirectory}");
-        builder.AppendLine();
-        builder.AppendLine("Ambiente");
-        builder.AppendLine("========");
-        builder.AppendLine($"OS: {Environment.OSVersion}");
-        builder.AppendLine($"Windows: {(OperatingSystem.IsWindows() ? "si" : "no")}");
-        builder.AppendLine($"Architettura processo: {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}");
-        builder.AppendLine($"Architettura OS: {System.Runtime.InteropServices.RuntimeInformation.OSArchitecture}");
-        builder.AppendLine($"Self-contained: {IsLikelySelfContained()}");
-        builder.AppendLine();
-        builder.AppendLine("Percorsi");
-        builder.AppendLine("========");
-        builder.AppendLine($"Config: {_paths?.ConfigPath ?? NodeCheckService.CreateDefaultConfigPath(_configFileName ?? "appsettings.json")}");
-        builder.AppendLine($"Report: {_paths?.ReportPath ?? "n/a"}");
-        builder.AppendLine($"Log: {_paths?.LogPath ?? "n/a"}");
-        builder.AppendLine();
-        builder.AppendLine("Modalita'");
-        builder.AppendLine("=========");
-        builder.AppendLine("Controlli read-only; DNS/TCP sui target configurati all'avvio dei test, con timeout.");
-        builder.AppendLine("Scelta manuale del nodo. Nessuna richiesta di rete all'avvio dell'app.");
-        builder.AppendLine("Il file config viene riletto da disco a ogni esecuzione.");
-        return builder.ToString();
-    }
-
-    private static string IsLikelySelfContained()
-    {
-        var runtimeConfigPath = Path.ChangeExtension(Environment.ProcessPath, ".runtimeconfig.json");
-        return File.Exists(runtimeConfigPath) ? "no" : "si";
-    }
-
-    private void OpenConfigFile()
-    {
-        var configPath = _paths?.ConfigPath ?? NodeCheckService.CreateDefaultConfigPath(_configFileName ?? "appsettings.json");
-        if (!File.Exists(configPath))
-        {
-            AppendLine($"[ERROR] config - File non trovato: {configPath}");
-            _status.Text = "File di configurazione non trovato.";
-            return;
-        }
-
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = configPath,
-                UseShellExecute = true
-            });
-            AppendLine($"[INFO] config - Apertura file per modifica: {configPath}");
-            _status.Text = "Config aperta. Usa Ricarica config dopo il salvataggio.";
-        }
-        catch (Exception ex)
-        {
-            AppendLine($"[ERROR] config - Impossibile aprire {configPath}: {ex.Message}");
-            _status.Text = "Impossibile aprire il file di configurazione.";
-        }
-    }
-
-    private void OpenLastReport()
-    {
-        if (string.IsNullOrWhiteSpace(_lastReportPath) || !File.Exists(_lastReportPath))
-        {
-            return;
-        }
-
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = _lastReportPath,
-            UseShellExecute = true
-        });
-    }
-
-    private void OpenOfficialLink(OfficialLink link)
-    {
-        try
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = link.Url,
-                UseShellExecute = true
-            });
-            AppendLine($"[INFO] documentazione - Apertura link: {link.Url}");
-        }
-        catch (Exception ex)
-        {
-            AppendLine($"[ERROR] documentazione - Impossibile aprire {link.Url}: {ex.Message}");
-            _status.Text = "Impossibile aprire il link della documentazione.";
-        }
-    }
-
-    private void AppendLine(string line)
-    {
-        var builder = new StringBuilder(_log.Text ?? "");
-        builder.AppendLine(line);
-        _log.Text = builder.ToString();
-        _log.CaretIndex = _log.Text.Length;
-    }
-
-    private sealed record OfficialLink(string Label, string Url);
 }

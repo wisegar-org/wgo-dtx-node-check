@@ -31,7 +31,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Output:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-0.0.1.exe
+installers\Wisegar.DTXInspector.Setup-0.0.2.exe
 ```
 
 ## Comportamento Installer

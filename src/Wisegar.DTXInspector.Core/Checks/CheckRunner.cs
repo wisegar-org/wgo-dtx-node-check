@@ -9,8 +9,9 @@ namespace Wisegar.DTXInspector.Checks;
 
 internal static class CheckRunner
 {
-    public static CheckRun Run(CheckConfiguration configuration, NodeProfile profile)
+    public static CheckRun Run(CheckConfiguration configuration, NodeProfile profile, Action<string>? phase = null, CancellationToken cancellation = default, Action<CheckResult>? completed = null)
     {
+        var startedAt = DateTimeOffset.Now;
         DebugLog.Info("Avvio controlli nodo.", new Dictionary<string, string?>
         {
             ["node"] = profile.Node.Key(),
@@ -46,14 +47,31 @@ internal static class CheckRunner
                 })
         };
 
-        AddDirectoryChecks(results, profile.RequiredDirectories);
-        AddFileChecks(results, profile.RequiredFiles);
-        AddProcessChecks(results, profile.RequiredProcesses);
-        AddServiceChecks(results, profile.RequiredServices);
-        AddTcpListenerChecks(results, profile.RequiredTcpListeners);
-        var network = NetworkChecks.RunAsync(profile).GetAwaiter().GetResult();
-        results.AddRange(InfrastructureChecklist.Run(profile, InfrastructureSnapshot.Read(), network));
-        results.AddRange(network);
+        try
+        {
+        Publish(0);
+        Phase("Directory e file locali");
+        Batch(() => AddDirectoryChecks(results, profile.RequiredDirectories));
+        Batch(() => AddFileChecks(results, profile.RequiredFiles));
+        Phase("Processi e servizi Windows");
+        Batch(() => AddProcessChecks(results, profile.RequiredProcesses));
+        Batch(() => AddServiceChecks(results, profile.RequiredServices));
+        Phase("Porte locali");
+        Batch(() => AddTcpListenerChecks(results, profile.RequiredTcpListeners));
+        Phase("Risoluzione DNS e connessioni TCP con timeout");
+        var network = NetworkChecks.RunAsync(profile, cancellation: cancellation).GetAwaiter().GetResult();
+        Phase("Checklist infrastrutturale obbligatoria");
+        Batch(() => results.AddRange(InfrastructureChecklist.Run(profile, InfrastructureSnapshot.Read(), network)));
+        Batch(() => results.AddRange(network));
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            results.Add(CheckResult.Warning("execution", "Esecuzione interrotta", "Report parziale: controlli rimanenti non eseguiti."));
+            foreach (var item in InfrastructureChecklist.Items(profile.Node))
+                if (!results.Any(result => result.Category == InfrastructureChecklist.Category && result.Name == item.Name))
+                results.Add(CheckResult.Warning(InfrastructureChecklist.Category, item.Name, "Non verificato: esecuzione interrotta.",
+                    new Dictionary<string, string?> { ["checkId"] = item.Id }));
+        }
 
         DebugLog.Info("Controlli nodo completati.", new Dictionary<string, string?>
         {
@@ -63,7 +81,7 @@ internal static class CheckRunner
         });
 
         return new CheckRun(
-            DateTimeOffset.Now,
+            startedAt,
             Environment.MachineName,
             Environment.UserDomainName,
             Environment.UserName,
@@ -72,6 +90,10 @@ internal static class CheckRunner
             configuration.EnvironmentName,
             profile,
             results);
+
+        void Phase(string name) { cancellation.ThrowIfCancellationRequested(); phase?.Invoke(name); }
+        void Batch(Action action) { cancellation.ThrowIfCancellationRequested(); var start = results.Count; action(); Publish(start); }
+        void Publish(int start) { foreach (var result in results.Skip(start)) completed?.Invoke(result); }
     }
 
     private static void AddDirectoryChecks(List<CheckResult> results, IReadOnlyList<PathCheck> checks)

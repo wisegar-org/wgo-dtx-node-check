@@ -39,7 +39,7 @@ internal static class ReportRenderer
         builder.AppendLine($"Architecture: {run.ProcessArchitecture}");
         builder.AppendLine();
         builder.AppendLine($"Summary: {run.PassedCount} passed, {run.WarningCount} warning, {run.FailedCount} failed");
-        builder.AppendLine($"Assessment: {run.Assessment} Not applicable: {run.NotApplicableCount}.");
+        builder.AppendLine($"Assessment: {run.Assessment} Not applicable: {run.NotApplicableCount}. Observed: {run.ObservedCount}.");
         builder.AppendLine("Scope: solo il nodo e il PC indicati. Eseguire separatamente sugli altri nodi; PASS TCP/DNS non certifica il funzionamento applicativo.");
         builder.AppendLine();
 
@@ -79,6 +79,7 @@ internal static class ReportRenderer
                 warnings = run.WarningCount,
                 failed = run.FailedCount,
                 notApplicable = run.NotApplicableCount,
+                observed = run.ObservedCount,
                 assessment = run.Assessment
             },
             results = run.Results.Select(result => new
@@ -124,10 +125,14 @@ internal static class ReportRenderer
         builder.AppendLine($"<div class=\"warning\"><strong>{run.WarningCount}</strong><span>Warnings</span></div>");
         builder.AppendLine($"<div class=\"fail\"><strong>{run.FailedCount}</strong><span>Failed</span></div>");
         builder.AppendLine($"<div><strong>{run.NotApplicableCount}</strong><span>Not applicable</span></div>");
+        builder.AppendLine($"<div><strong>{run.ObservedCount}</strong><span>Osservazioni locali</span></div>");
         builder.AppendLine("</section>");
+        foreach (var group in run.Results.GroupBy(x => x.Category))
+        {
+        builder.AppendLine($"<h2>{Html(group.Key)}</h2>");
         builder.AppendLine("<table><thead><tr><th>Status</th><th>Category</th><th>Name</th><th>Message</th><th>Details</th></tr></thead><tbody>");
 
-        foreach (var result in run.Results)
+        foreach (var result in group)
         {
             builder.AppendLine($"<tr class=\"{Html(result.Status.ToString().ToLowerInvariant())}\">");
             builder.AppendLine($"<td>{Html(result.Status.ToString())}</td>");
@@ -139,6 +144,7 @@ internal static class ReportRenderer
         }
 
         builder.AppendLine("</tbody></table>");
+        }
         builder.AppendLine("</main></body></html>");
         return builder.ToString();
     }
@@ -211,6 +217,7 @@ internal static class ReportRenderer
         var builder = CreateHtml("WGO DTX Inspector Inventory");
         builder.AppendLine("<main>");
         builder.AppendLine("<h1>WGO DTX Inspector Inventory</h1>");
+        builder.AppendLine("<p>Osservazioni locali del PC. Questo inventario non è una verifica di conformità DTX e non esegue prove DNS/TCP.</p>");
         builder.AppendLine("<section class=\"summary\">");
         builder.AppendLine($"<div><strong>Started</strong><span>{Html(run.StartedAt.ToString("O"))}</span></div>");
         builder.AppendLine($"<div><strong>Machine</strong><span>{Html(run.Machine.MachineName)}</span></div>");
@@ -238,6 +245,10 @@ internal static class ReportRenderer
         AppendInventoryTable(builder, "Processes", ["Name", "Count"], run.Processes.Select(process => new[] { process.Name, process.Count.ToString() }));
         AppendInventoryTable(builder, "Services", ["Name", "Status", "Display Name"], run.Services.Select(service => new[] { service.Name, service.Status, service.DisplayName }));
         AppendInventoryTable(builder, "TCP Listeners", ["Address", "Port"], run.TcpListeners.Select(listener => new[] { listener.Address, listener.Port.ToString() }));
+        AppendInventoryTable(builder, "Rete locale (osservazioni)", ["Scheda", "IPv4", "IPv6", "DHCP", "DNS"], (run.Adapters ?? []).Select(a => new[] {
+            a.Name, string.Join(", ", a.Ipv4), string.Join(", ", a.Ipv6), a.Dhcp?.ToString() ?? "Non disponibile", string.Join(", ", a.Dns)
+        }));
+        AppendInventoryTable(builder, "Letture non disponibili", ["Dettaglio"], (run.ObservationErrors ?? []).Select(error => new[] { error }));
         builder.AppendLine("</main></body></html>");
         return builder.ToString();
     }
@@ -268,6 +279,8 @@ internal static class ReportRenderer
             tr.warning td:first-child { color:var(--warning); font-weight:700; }
             tr.fail td:first-child { color:var(--fail); font-weight:700; }
             ul { margin:0; padding-left:18px; }
+            td { overflow-wrap:anywhere; } thead { display:table-header-group; }
+            @media print { body { background:white; } main { max-width:none; padding:0; } tr { break-inside:avoid; } h2 { break-after:avoid; } }
             """);
         builder.AppendLine("</style></head><body>");
         return builder;

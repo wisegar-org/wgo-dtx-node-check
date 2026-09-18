@@ -14,19 +14,28 @@ internal static class InventoryRunner
         "dtx"
     ];
 
-    public static InventoryRun Run()
+    public static InventoryRun Run(CancellationToken cancellation = default)
     {
         DebugLog.Info("Avvio inventario PC.");
 
-        var run = new InventoryRun(
-            DateTimeOffset.Now,
-            ReadMachine(),
-            ReadDrives(),
-            ReadProcesses(),
-            WindowsServiceEnumerator.ListServices(),
-            ReadTcpListeners(),
-            ReadInstalledPrograms(),
-            ReadCandidatePaths());
+        var run = new InventoryRun(DateTimeOffset.Now, ReadMachine(), [], [], [], [], [], [], [], []);
+        try
+        {
+            Phase("Schede di rete, indirizzi e DNS locali");
+            var snapshot = Wisegar.DTXInspector.Checks.InfrastructureSnapshot.Read();
+            run = run with { Adapters = snapshot.Adapters, ObservationErrors = snapshot.Errors };
+            Phase("Dischi locali"); run = run with { Drives = ReadDrives() };
+            Phase("Processi"); run = run with { Processes = ReadProcesses() };
+            Phase("Servizi Windows"); run = run with { Services = WindowsServiceEnumerator.ListServices() };
+            Phase("Porte in ascolto"); run = run with { TcpListeners = ReadTcpListeners() };
+            Phase("Software installato"); run = run with { InstalledPrograms = ReadInstalledPrograms() };
+            Phase("Directory DTX"); run = run with { CandidatePaths = ReadCandidatePaths(cancellation) };
+            cancellation.ThrowIfCancellationRequested();
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            run = run with { ObservationErrors = (run.ObservationErrors ?? []).Append("Inventario interrotto: dati parziali, sezioni rimanenti non lette.").ToArray() };
+        }
 
         DebugLog.Info("Inventario PC completato.", new Dictionary<string, string?>
         {
@@ -39,6 +48,8 @@ internal static class InventoryRunner
         });
 
         return run;
+
+        void Phase(string name) { cancellation.ThrowIfCancellationRequested(); DebugLog.Info(name); }
     }
 
     private static MachineInventory ReadMachine() =>
@@ -180,7 +191,7 @@ internal static class InventoryRunner
         }
     }
 
-    private static IReadOnlyList<CandidatePathInventory> ReadCandidatePaths()
+    private static IReadOnlyList<CandidatePathInventory> ReadCandidatePaths(CancellationToken cancellation)
     {
         var roots = new[]
             {
@@ -195,7 +206,7 @@ internal static class InventoryRunner
         var candidates = new List<CandidatePathInventory>();
         foreach (var root in roots)
         {
-            AddCandidateDirectories(candidates, root, maxDepth: 4, maxCandidates: 300);
+            AddCandidateDirectories(candidates, root, maxDepth: 4, maxCandidates: 300, cancellation);
         }
 
         return candidates
@@ -205,7 +216,7 @@ internal static class InventoryRunner
             .ToArray();
     }
 
-    private static void AddCandidateDirectories(List<CandidatePathInventory> candidates, string root, int maxDepth, int maxCandidates)
+    private static void AddCandidateDirectories(List<CandidatePathInventory> candidates, string root, int maxDepth, int maxCandidates, CancellationToken cancellation)
     {
         if (!Directory.Exists(root) || candidates.Count >= maxCandidates)
         {
@@ -217,11 +228,12 @@ internal static class InventoryRunner
 
         while (pending.Count > 0 && candidates.Count < maxCandidates)
         {
+            cancellation.ThrowIfCancellationRequested();
             var current = pending.Dequeue();
             IEnumerable<string> directories;
             try
             {
-                directories = Directory.EnumerateDirectories(current.Path);
+                directories = Directory.GetDirectories(current.Path);
             }
             catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
             {
@@ -235,6 +247,11 @@ internal static class InventoryRunner
 
             foreach (var directory in directories)
             {
+                cancellation.ThrowIfCancellationRequested();
+                // Do not follow junctions to other volumes or network locations.
+                try { if ((File.GetAttributes(directory) & FileAttributes.ReparsePoint) != 0) continue; }
+                catch (IOException) { continue; }
+                catch (UnauthorizedAccessException) { continue; }
                 var name = Path.GetFileName(directory);
                 if (CandidateTerms.Any(term => name.Contains(term, StringComparison.OrdinalIgnoreCase)))
                 {

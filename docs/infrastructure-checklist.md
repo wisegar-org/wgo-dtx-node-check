@@ -20,6 +20,10 @@ Il tool verifica e segnala; non configura il sistema.
 
 ## Configurazione per nodo
 
+Per istruzioni dettagliate, esempi e origine di ogni valore consultare la
+[guida workstation](workstation-settings.md). Il
+[percorso guidato dalla UI](guided-configuration-plan.md) e' pianificato, non ancora disponibile.
+
 Compilare `nodes.<nodo>.infrastructure` nel JSON unico:
 
 | Campo | Contenuto |

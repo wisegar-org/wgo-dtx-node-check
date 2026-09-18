@@ -1,5 +1,5 @@
 #define AppName "WGO DTX Inspector"
-#define AppVersion "0.0.1"
+#define AppVersion "0.0.2"
 #define SourceDir "..\..\src\Wisegar.DTXInspector.App\bin\Release\net10.0\win-x64\publish"
 
 [Setup]

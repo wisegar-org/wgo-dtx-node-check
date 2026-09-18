@@ -5,5 +5,6 @@ internal enum CheckStatus
     Pass,
     Warning,
     Fail,
-    NotApplicable
+    NotApplicable,
+    Observed
 }

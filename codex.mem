@@ -1,5 +1,47 @@
 # codex.mem
 
+## Tabs and guided configuration implemented — 2026-09-19
+
+- Current version 0.0.2, aligned .NET metadata, manifest and Inno installer.
+- Four explicit workspaces: DTX Core, Workstation, Client, PC inspection. Custom
+  TabControl disables Avalonia's automatic first-tab selection. No inferred role.
+- NodeWorkspace owns results, filters, activity, report/log paths. MainWindow
+  captures the originating workspace for background operations; one global run.
+- Real phase progress and stable category/ordinal result IDs replace fake delays.
+  Virtualized lists, details, result filters/search, activity diagnostics, clipboard
+  and log export. Memory activity capped at 2000; per-run logs remain on disk.
+- Cancellation for DNS/TCP and local phase boundaries. Partial node reports keep
+  mandatory checklist and unexecuted checks as warnings; PC inventory also reports
+  cancellation. Native reads already in progress complete before cancellation.
+- ConfigurationWizard has five steps, adapter discovery on demand, editable lists,
+  approved identity/DNS/IP/user/path fields, endpoint types, DICOM, manual notes,
+  draft network preview and review/explicit save or save-and-run.
+- ConfigurationDraft edits a detached JSON tree, preserves unknown properties,
+  other roles/common, validates, detects disk conflicts twice, replaces atomically
+  and keeps original bytes in a unique backup. Invalid files aren't reset.
+- DTX observations use Observed instead of Pass. PC inventory includes local
+  adapters/IP/DNS and read errors, without active probes or an inferred Client role.
+- HTML reports grouped by category, print styles; PC reports/logs unique per run.
+- User guide: docs/desktop-workflow.md. Earlier planning entries below are history.
+- Tests cover baseline checks, ownership, tabs/busy/role isolation, wizard navigation,
+  unknown-field preservation, conflict/validation safety, backup, partial checklist,
+  cancellation, log scope and unique PC output. Windows x64 only.
+
+## Documentation and UI configuration plan - 2026-09-19
+
+- Added docs/tabs-and-readable-results-plan.md: four explicit local contexts,
+  role-focused views, independent tab/run state, readable structured results and
+  activity, real progress instead of simulated RUNNING, per-run diagnostics/report
+  files and integration with guided settings. Planning only, no UI changes yet.
+
+- Added docs/workstation-settings.md describing actual field semantics, sources,
+  examples, validation limits, local vs remote ports and manual verification gaps.
+- Added docs/guided-configuration-plan.md: proposed 5-step UI wizard with explicit
+  role choice, local suggestions, baseline confirmation, draft network preview,
+  conservative per-node edits, validation, conflict detection and atomic backup.
+- User requested documentation and planning only; wizard is not implemented,
+  no runtime/config defaults or installer version changed in this task.
+
 ## Continuation on Windows - 2026-09-18
 
 ### Version scheme reset to 0.0.1

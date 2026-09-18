@@ -152,3 +152,16 @@ The preferred future state is a single branded app:
 - manual override in UI
 - HTML reports opened automatically after test/inventory runs
 - self-contained deploys for Windows x64 only
+
+The desktop now has four explicit tabs: DTX Core, Workstation, Client and PC
+inspection (the last is not a DTX role). Never enable automatic first-tab selection.
+Keep results, activity, filters and report/log paths bound to the originating tab
+when users change tabs during an operation. Only one operation runs at a time.
+Cancellation must retain the mandatory checklist in partial node reports and must
+not convert unexecuted checks to PASS or NotApplicable. Observed inventory data
+is distinct from successful checks.
+
+The guided editor may save appsettings.json after the explicit review confirmation:
+preserve common/other nodes and unknown fields, detect external edits, validate,
+replace atomically with a unique backup. Cancel does not save. Draft network
+previews are explicit, bounded DNS/TCP only and never save config automatically.

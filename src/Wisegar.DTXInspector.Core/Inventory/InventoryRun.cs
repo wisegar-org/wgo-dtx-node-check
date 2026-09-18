@@ -10,7 +10,9 @@ internal sealed record InventoryRun(
     IReadOnlyList<ServiceInventory> Services,
     IReadOnlyList<TcpListenerInventory> TcpListeners,
     IReadOnlyList<InstalledProgramInventory> InstalledPrograms,
-    IReadOnlyList<CandidatePathInventory> CandidatePaths) : IRunResult
+    IReadOnlyList<CandidatePathInventory> CandidatePaths,
+    IReadOnlyList<Wisegar.DTXInspector.Checks.AdapterObservation>? Adapters = null,
+    IReadOnlyList<string>? ObservationErrors = null) : IRunResult
 {
     public int ExitCode => ExitCodes.Success;
 }

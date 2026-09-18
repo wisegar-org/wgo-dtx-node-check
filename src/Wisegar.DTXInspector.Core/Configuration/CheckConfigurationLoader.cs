@@ -43,7 +43,7 @@ internal static class CheckConfigurationLoader
         }
     }
 
-    private static void Validate(CheckConfiguration configuration)
+    internal static void Validate(CheckConfiguration configuration)
     {
         ValidateSet("common", configuration.Common);
         ValidateNode(NodeKind.Core, configuration.Nodes.Core);

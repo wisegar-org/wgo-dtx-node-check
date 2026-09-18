@@ -5,7 +5,21 @@ namespace Wisegar.DTXInspector.Diagnostics;
 internal static class DebugLog
 {
     private static readonly object Sync = new();
-    private static string? _path;
+    private static readonly AsyncLocal<string?> PathContext = new();
+    private static string? _path { get => PathContext.Value; set => PathContext.Value = value; }
+    internal static readonly AsyncLocal<Action<string, string, string>?> Observer = new();
+
+    internal static IDisposable Begin(string path, Action<string, string, string> observer)
+    {
+        var scope = new Scope(_path, Observer.Value);
+        try { Observer.Value = observer; TryInitialize(path); return scope; }
+        catch { scope.Dispose(); throw; }
+    }
+
+    private sealed class Scope(string? previousPath, Action<string, string, string>? previousObserver) : IDisposable
+    {
+        public void Dispose() { _path = previousPath; Observer.Value = previousObserver; }
+    }
 
     public static bool IsEnabled => _path is not null;
 
@@ -73,6 +87,8 @@ internal static class DebugLog
         {
             builder.AppendLine(exception.ToString());
         }
+
+        Observer.Value?.Invoke(level, message, builder.ToString());
 
         lock (Sync)
         {

@@ -20,11 +20,12 @@ Il solo avvio dell'app non crea report o log.
 
 `Wisegar.DTXInspector.Core` contiene controlli, inventario e report HTML. L'app unica
 `WGO DTX Inspector` richiede la scelta manuale di Core, Workstation o Client.
-All'avvio nessun nodo e' selezionato e il menu invita a scegliere.
+All'avvio nessun nodo e' selezionato: scegliere esplicitamente un tab tra
+`DTX Core`, `Workstation`, `Client` e `Ispezione PC`.
 Ogni nodo richiede IP statico e IPv6 disabilitato sulla scheda DTX:
 DHCP o indirizzi IPv6 presenti producono FAIL anche sui client.
-La toolbar contiene il selettore nodo e le azioni `Esegui test`, `Inventario PC`
-e `Apri report`, con icone e tooltip. Il menu `Configurazione` raccoglie apertura,
+La toolbar mostra le azioni del tab: `Configura nodo`, `Esegui test`,
+`Ispeziona DTX`, `Ispeziona PC` e `Apri report`. Il menu `Configurazione` raccoglie apertura,
 ricarica e impostazioni da inventario; `Aiuto` contiene documentazione e About.
 I menu sono accessibili da tastiera con Alt+C / Alt+A. Su finestre strette la
 toolbar dispone le azioni su piu' righe senza nasconderle.
@@ -47,12 +48,26 @@ percorsi usati.
 - `Wisegar.DTXInspector.App`: app Avalonia unica `WGO DTX Inspector` con scelta manuale del nodo.
 - `tests/Wisegar.DTXInspector.Desktop.Smoke`: verifiche automatiche, non un'app distribuita.
 
-Aprire l'app, verificare o selezionare il nodo, quindi premere `Esegui test`.
-`Inventario PC` e' disponibile anche senza selezionare un nodo. Entrambe le
+Aprire l'app, selezionare il tab del nodo, quindi premere `Esegui test`.
+`Ispezione PC` ha un tab autonomo senza ruolo DTX. Entrambe le
 azioni generano un report HTML e lo aprono automaticamente. La configurazione
-si puo' aprire prima della selezione; `Ricarica config` chiede di scegliere
-se il nodo non e' ancora selezionato, altrimenti ricarica il piano del nodo.
+si puo' aprire prima della selezione; `Ricarica piano` aggiorna il tab DTX scelto.
 La selezione manuale resta valida durante la sessione.
+
+Ogni tab conserva risultati, ricerca, filtro per esito/categoria, attività e ultimo
+report. Si può cambiare tab durante una prova, ma parte una sola operazione alla
+volta. I risultati si aggiornano al completamento delle fasi reali; non ci sono
+ritardi simulati. `Interrompi` produce dati parziali con segnalazioni esplicite.
+Il tab `Attività` separa i messaggi operativi dai dettagli tecnici, consente copia
+ed esportazione del log. La memoria conserva al massimo 2000 eventi; il log su
+disco mantiene la diagnostica completa della singola esecuzione.
+
+`Configura nodo` apre cinque passi: identità/scheda, Core/DNS, utente/cartelle,
+servizi/comunicazioni e riepilogo. Le modifiche restano in bozza fino alla conferma.
+Il salvataggio valida il JSON, conserva gli altri nodi e le proprietà sconosciute,
+crea un backup e si blocca se il file è cambiato sul disco. `Prova collegamenti`
+usa la bozza senza salvarla; `Salva ed esegui test` avvia la checklist completa.
+Guida operativa: [tab e configurazione guidata](docs/desktop-workflow.md).
 
 ### Ispeziona DTX
 
@@ -106,7 +121,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-0.0.1.exe
+installers\Wisegar.DTXInspector.Setup-0.0.2.exe
 ```
 
 L'installer installa in `Program Files\WGO DTX Inspector`, richiede privilegi
@@ -144,7 +159,7 @@ e' stato eseguito. Se restano requisiti non verificati, il riepilogo indica
 
 ## Inventario PC
 
-Il pulsante `Inventario PC` raccoglie dati locali read-only per aiutare a
+Il pulsante `Ispeziona PC`, nel tab omonimo, raccoglie dati locali read-only per aiutare a
 preparare il file JSON di configurazione:
 
 - macchina, utente, sistema operativo e architettura;
@@ -158,6 +173,13 @@ preparare il file JSON di configurazione:
 Il report viene salvato in `ProgramData\WGO DTX Inspector\Reports\DTX-Inventory.html`.
 
 ## Configurazione
+
+- [Guida alle impostazioni della workstation](docs/workstation-settings.md):
+  significato dei campi, dove reperirli, esempi e limiti dei controlli attuali.
+- [Piano della configurazione guidata dalla UI](docs/guided-configuration-plan.md):
+  progetto di riferimento per passi, validazione e salvataggio protetto.
+- [Piano tab per nodo e log leggibili](docs/tabs-and-readable-results-plan.md):
+  progetto di riferimento per Core, Workstation, Client e Ispezione PC.
 
 Un unico file JSON contiene impostazioni comuni e impostazioni specifiche per
 nodo. L'app unica usa `appsettings.json`; le impostazioni `common` vengono

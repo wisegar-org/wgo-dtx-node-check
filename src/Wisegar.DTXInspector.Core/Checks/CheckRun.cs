@@ -19,6 +19,7 @@ internal sealed record CheckRun(
     public int WarningCount => Results.Count(result => result.Status == CheckStatus.Warning);
     public int FailedCount => Results.Count(result => result.Status == CheckStatus.Fail);
     public int NotApplicableCount => Results.Count(result => result.Status == CheckStatus.NotApplicable);
+    public int ObservedCount => Results.Count(result => result.Status == CheckStatus.Observed);
     public string Assessment => HasFailures ? "NON CONFORME: presenti controlli falliti."
         : WarningCount > 0 ? "VERIFICA INCOMPLETA: presenti requisiti non verificati/segnalazioni."
         : "Controlli applicabili completati senza segnalazioni.";

@@ -23,7 +23,7 @@ internal sealed class SystemNetworkProbe : INetworkProbe
 
 internal static class NetworkChecks
 {
-    internal static async Task<IReadOnlyList<CheckResult>> RunAsync(NodeProfile profile, INetworkProbe? probe = null)
+    internal static async Task<IReadOnlyList<CheckResult>> RunAsync(NodeProfile profile, INetworkProbe? probe = null, CancellationToken cancellation = default)
     {
         probe ??= new SystemNetworkProbe();
         var settings = profile.Infrastructure;
@@ -36,7 +36,7 @@ internal static class NetworkChecks
 
         async Task<CheckResult> RunLimited(Func<Task<CheckResult>> run)
         {
-            await concurrency.WaitAsync();
+            await concurrency.WaitAsync(cancellation);
             try { return await run(); }
             finally { concurrency.Release(); }
         }
@@ -57,7 +57,8 @@ internal static class NetworkChecks
                 var elapsed = new List<long>();
                 for (var i = 0; i < 3; i++)
                 {
-                    using var timeout = new CancellationTokenSource(settings.NetworkTimeoutMs);
+                    using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+                    timeout.CancelAfter(settings.NetworkTimeoutMs);
                     var watch = Stopwatch.StartNew();
                     var addresses = await probe.ResolveAsync(host, timeout.Token).WaitAsync(timeout.Token);
                     elapsed.Add(watch.ElapsedMilliseconds);
@@ -74,7 +75,7 @@ internal static class NetworkChecks
                     return CheckResult.Warning("network-dns", host, "DNS lento o risposte variabili nei tre campioni. Verificare round-robin, cache e fallback.", details);
                 return CheckResult.Pass("network-dns", host, "Tre risoluzioni riuscite entro soglia con risposte uguali. Prova puntuale; non certifica DNS interno, stabilita' nel tempo o bidirezionalita'.", details);
             }
-            catch (Exception ex) when (ex is SocketException or OperationCanceledException or ArgumentException)
+            catch (Exception ex) when (!cancellation.IsCancellationRequested && (ex is SocketException or OperationCanceledException or ArgumentException))
             {
                 return CheckResult.Fail("network-dns", host, $"Risoluzione fallita o timeout: {ex.Message}", details);
             }
@@ -90,13 +91,14 @@ internal static class NetworkChecks
             };
             try
             {
-                using var timeout = new CancellationTokenSource(settings.NetworkTimeoutMs);
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+                timeout.CancelAfter(settings.NetworkTimeoutMs);
                 var watch = Stopwatch.StartNew();
                 await probe.ConnectAsync(endpoint.Host, endpoint.Port, timeout.Token).WaitAsync(timeout.Token);
                 details["latencyMs"] = watch.ElapsedMilliseconds.ToString();
                 return CheckResult.Pass("network-tcp", endpoint.Name, "Connessione TCP riuscita. Non prova REST/gRPC/DICOM, assenza di ispezione o accesso nella direzione inversa.", details);
             }
-            catch (Exception ex) when (ex is SocketException or OperationCanceledException or ArgumentException)
+            catch (Exception ex) when (!cancellation.IsCancellationRequested && (ex is SocketException or OperationCanceledException or ArgumentException))
             {
                 return CheckResult.Fail("network-tcp", endpoint.Name, $"Connessione fallita o timeout: {ex.Message}", details);
             }
