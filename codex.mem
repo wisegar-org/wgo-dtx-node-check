@@ -1,5 +1,11 @@
 # codex.mem
 
+## Horizontal confirmation actions - 0.0.22
+
+- Discard-draft and Core-name proposal dialogs now place actions in one horizontal,
+  right-aligned row with consistent spacing. Discard dialog minimum width is 480.
+- Keep editing / Cancel remain the default and Escape actions; no behavior change.
+
 ## White window backgrounds - 0.0.21
 
 - All application windows use pure white backgrounds through DesktopTheme,

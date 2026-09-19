@@ -110,7 +110,8 @@ public sealed class ConfigurationWizard : Window
             var accept = new Button { Content = "Usa questo nome Core" };
             cancel.Click += (_, _) => proposal.Close(false); accept.Click += (_, _) => proposal.Close(true);
             proposal.Content = new StackPanel { Margin = new Thickness(20), Spacing = 12, Children = {
-                Info($"Nome: {uri.Host}\nPorta URL: {uri.Port}\nLa porta non viene aggiunta automaticamente agli endpoint: confermarne prima funzione e destinazione."), cancel, accept } };
+                Info($"Nome: {uri.Host}\nPorta URL: {uri.Port}\nLa porta non viene aggiunta automaticamente agli endpoint: confermarne prima funzione e destinazione."),
+                new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Children = { cancel, accept } } } };
             if (await proposal.ShowDialog<bool>(this))
             {
                 var field = panel.Children.OfType<StackPanel>().First().Children.OfType<TextBox>().Single(); field.Text = uri.Host;
@@ -329,11 +330,14 @@ public sealed class ConfigurationWizard : Window
 
     private async Task<bool> ConfirmDiscard()
     {
-        var dialog = new Window { Title = "Scartare la bozza?", Width = 420, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var dialog = new Window { Title = "Scartare la bozza?", Width = 480, MinWidth = 480, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var keep = new Button { Content = "Continua a modificare", IsDefault = true, IsCancel = true };
         var discard = new Button { Content = "Scarta modifiche" };
         keep.Click += (_, _) => dialog.Close(false); discard.Click += (_, _) => dialog.Close(true);
-        dialog.Content = new StackPanel { Margin = new Thickness(20), Spacing = 15, Children = { Info("Le modifiche non salvate andranno perse."), keep, discard } };
+        dialog.Content = new StackPanel { Margin = new Thickness(20), Spacing = 15, Children = {
+            Info("Le modifiche non salvate andranno perse."),
+            new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8, Children = { keep, discard } }
+        } };
         return await dialog.ShowDialog<bool>(this);
     }
 
