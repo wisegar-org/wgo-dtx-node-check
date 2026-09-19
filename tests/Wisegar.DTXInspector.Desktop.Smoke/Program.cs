@@ -15,6 +15,14 @@ internal static class Program
     {
         AppBuilder.Configure<Application>().UsePlatformDetect().SetupWithoutStarting();
         DesktopTheme.Install(Application.Current!);
+        var expectedRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Wisegar", AppSettings.ApplicationName);
+        Assert(NodeCheckService.CreateDefaultDataRoot(AppSettings.ApplicationName) == expectedRoot, "PC scan uses Wisegar data directory");
+        foreach (var role in Enum.GetValues<DtxNodeRole>())
+        {
+            var paths = NodeCheckService.CreateDefaultPaths(role, AppSettings.ApplicationName);
+            Assert(Path.GetDirectoryName(paths.ReportPath) == Path.Combine(expectedRoot, "Reports"), "Node reports use Wisegar data directory");
+            Assert(Path.GetDirectoryName(paths.LogPath) == Path.Combine(expectedRoot, "Logs"), "Node logs use Wisegar data directory");
+        }
         InventorySettingsChecks.Run(); InfrastructureChecks.Run(); DtxInspectionChecks.Run();
         GuidedConfigurationChecks.Run();
         var window = new MainWindow();

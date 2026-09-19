@@ -156,7 +156,7 @@ public sealed class MainWindow : Window
         _cancellation = new CancellationTokenSource();
         _cancelButton.IsVisible = true; _cancelButton.IsEnabled = true;
         ShowStatus($"{origin.Label}: operazione in corso. Puoi selezionare gli altri contesti.");
-        var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), AppSettings.ApplicationName);
+        var root = NodeCheckService.CreateDefaultDataRoot(AppSettings.ApplicationName);
         var progress = new UiProgress(activity => origin.AddActivity(activity));
         try
         {

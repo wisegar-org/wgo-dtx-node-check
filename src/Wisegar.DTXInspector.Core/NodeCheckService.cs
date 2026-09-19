@@ -51,15 +51,18 @@ public static class NodeCheckService
     {
         var node = role.ToString().ToLowerInvariant();
         var baseDir = AppContext.BaseDirectory;
-        var dataRoot = OperatingSystem.IsWindows()
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), applicationName)
-            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), applicationName);
+        var dataRoot = CreateDefaultDataRoot(applicationName);
 
         return new NodeCheckPaths(
             Path.Combine(baseDir, configFileName ?? "appsettings.json"),
             Path.Combine(dataRoot, "Reports", $"DTX-{node}-Report.html"),
             Path.Combine(dataRoot, "Logs", $"Wisegar.DTXInspector-{node}-debug.log"));
     }
+
+    public static string CreateDefaultDataRoot(string applicationName) =>
+        Path.Combine(Environment.GetFolderPath(OperatingSystem.IsWindows()
+            ? Environment.SpecialFolder.CommonApplicationData
+            : Environment.SpecialFolder.LocalApplicationData), "Wisegar", applicationName);
 
     public static string CreateDefaultConfigPath(string configFileName) =>
         Path.Combine(AppContext.BaseDirectory, configFileName);

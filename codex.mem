@@ -1,5 +1,22 @@
 # codex.mem
 
+## White window backgrounds - 0.0.21
+
+- All application windows use pure white backgrounds through DesktopTheme,
+  including the main window, guided configuration and dialogs.
+- Red accent, interaction states and semantic status colors remain unchanged.
+
+## Wisegar installation/data paths - 0.0.20
+
+- Default install: C:\Program Files\Wisegar\WGO DTX Inspector.
+- All node/DTX/PC reports and logs use ProgramData\Wisegar\WGO DTX Inspector,
+  through the shared CreateDefaultDataRoot helper.
+- Setup stops reusing the old installation directory automatically. When target
+  settings are absent, copy appsettings.json (or legacy JSON) from the registered
+  old location, falling back to the old default. Keep source data and settings;
+  never overwrite target settings, abort on config-copy failure.
+- Historical reports/logs and old installation files are not moved or deleted.
+
 ## Documentation and consolidated commit - 0.0.19
 
 - Updated current workflow, red Fluent theme, compact window, icon meaning and

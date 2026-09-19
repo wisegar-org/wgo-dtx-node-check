@@ -133,19 +133,21 @@ packaging\inno\Build-InnoInstallers.cmd
 Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-0.0.19.exe
+installers\Wisegar.DTXInspector.Setup-0.0.21.exe
 ```
 
-L'installer installa in `Program Files\WGO DTX Inspector`, richiede privilegi
-admin e crea cartelle report/log in `ProgramData\WGO DTX Inspector`, shortcut
+L'installer installa in `Program Files\Wisegar\WGO DTX Inspector`, richiede privilegi
+admin e crea cartelle report/log in `ProgramData\Wisegar\WGO DTX Inspector`, shortcut
 Start Menu/Desktop e uninstaller Windows standard. Il JSON e' esterno, accanto
 all'eseguibile: un aggiornamento lo conserva, cosi' come la disinstallazione.
 Le precedenti installazioni per nodo restano separate; le loro configurazioni
 personalizzate vanno riportate manualmente nelle sezioni del JSON unificato.
 Il repository contiene un solo progetto desktop e un solo script `.iss`.
 Il setup mantiene l'identificativo della precedente app: durante un aggiornamento
-puo' riutilizzare la cartella gia' installata e conserva il JSON personalizzato.
-I nuovi report/log vanno in `ProgramData\WGO DTX Inspector`; quelli precedenti
+propone la nuova cartella sotto `Wisegar` anche negli aggiornamenti e copia il JSON
+personalizzato dalla precedente installazione se la destinazione non ne contiene già uno.
+La copia originale e gli altri file della vecchia cartella non vengono eliminati.
+I nuovi report/log vanno in `ProgramData\Wisegar\WGO DTX Inspector`; quelli precedenti
 restano nella vecchia cartella dati.
 
 ## Controlli implementati
@@ -182,7 +184,7 @@ preparare il file JSON di configurazione:
 - programmi installati letti dal registro in sola lettura;
 - directory candidate DTX sotto Program Files e ProgramData.
 
-Il report viene salvato in `ProgramData\WGO DTX Inspector\Reports\DTX-Inventory.html`.
+Il report viene salvato in `ProgramData\Wisegar\WGO DTX Inspector\Reports\DTX-Inventory.html`.
 
 ## Configurazione
 

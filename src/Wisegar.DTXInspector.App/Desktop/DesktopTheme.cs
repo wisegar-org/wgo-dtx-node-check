@@ -12,7 +12,7 @@ public static class DesktopTheme
 {
     public static readonly IBrush Ink = Brush.Parse("#172B4D");
     public static readonly IBrush Muted = Brush.Parse("#526379");
-    public static readonly IBrush Canvas = Brush.Parse("#F4F7FB");
+    public static readonly IBrush Canvas = Brushes.White;
     public static readonly IBrush Line = Brush.Parse("#DCE3ED");
 
     public static void Install(Application app)

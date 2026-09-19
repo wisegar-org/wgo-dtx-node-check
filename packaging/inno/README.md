@@ -31,7 +31,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Output:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-0.0.19.exe
+installers\Wisegar.DTXInspector.Setup-0.0.21.exe
 ```
 
 ## Comportamento Installer
@@ -54,9 +54,12 @@ dell'eseguibile. Installer e anteprime temporanee in `installers` non sono versi
 
 ### Installazione
 
-- Installa in `Program Files`.
+- Installa in `C:\Program Files\Wisegar\WGO DTX Inspector`.
+- Usa il nuovo percorso anche in aggiornamento; copia il JSON della precedente
+  installazione se manca nella destinazione, senza eliminare quello originale.
 - Richiede privilegi amministrativi.
-- Crea cartelle `Reports` e `Logs` sotto `ProgramData`.
+- Crea `Reports` e `Logs` sotto `C:\ProgramData\Wisegar\WGO DTX Inspector`.
+- Report e log precedenti rimangono nella vecchia cartella; i nuovi usano il percorso Wisegar.
 - Crea shortcut nel menu Start.
 - Offre opzionalmente shortcut desktop.
 - Registra l'uninstaller standard di Windows.

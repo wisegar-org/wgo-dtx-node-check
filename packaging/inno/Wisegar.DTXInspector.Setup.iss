@@ -1,5 +1,5 @@
 #define AppName "WGO DTX Inspector"
-#define AppVersion "0.0.19"
+#define AppVersion "0.0.21"
 #define SourceDir "..\..\src\Wisegar.DTXInspector.App\bin\Release\net10.0\win-x64\publish"
 
 [Setup]
@@ -7,7 +7,8 @@ AppId={{780CD69D-9C44-47A0-9BE9-173968B21B79}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=Wisegar
-DefaultDirName={autopf}\{#AppName}
+DefaultDirName={autopf}\Wisegar\{#AppName}
+UsePreviousAppDir=no
 DefaultGroupName={#AppName}
 OutputDir=..\..\installers
 OutputBaseFilename=Wisegar.DTXInspector.Setup-{#AppVersion}
@@ -26,8 +27,8 @@ Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Dirs]
-Name: "{commonappdata}\{#AppName}\Reports"
-Name: "{commonappdata}\{#AppName}\Logs"
+Name: "{commonappdata}\Wisegar\{#AppName}\Reports"
+Name: "{commonappdata}\Wisegar\{#AppName}\Logs"
 
 [Files]
 Source: "{#SourceDir}\WgoDtxInspector.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -52,11 +53,37 @@ Filename: "{app}\WgoDtxInspector.exe"; Description: "Avvia {#AppName}"; Flags: n
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
-  OldConfig, NewConfig: String;
+  OldConfig, NewConfig, PreviousDir: String;
 begin
   Result := '';
   OldConfig := ExpandConstant('{app}\dtx-node-check.json');
   NewConfig := ExpandConstant('{app}\appsettings.json');
+  { Keep the user's configuration when relocating an existing installation.
+    Existing destination settings always win; never delete the source. }
+  if not FileExists(NewConfig) and not FileExists(OldConfig) then
+  begin
+    if not RegQueryStringValue(HKLM64,
+      'Software\Microsoft\Windows\CurrentVersion\Uninstall\{780CD69D-9C44-47A0-9BE9-173968B21B79}_is1',
+      'Inno Setup: App Path', PreviousDir) then
+      PreviousDir := ExpandConstant('{autopf}\{#AppName}');
+    OldConfig := AddBackslash(PreviousDir) + 'appsettings.json';
+    if not FileExists(OldConfig) then
+      OldConfig := AddBackslash(PreviousDir) + 'dtx-node-check.json';
+    if FileExists(OldConfig) then
+    begin
+      if not ForceDirectories(ExpandConstant('{app}')) then
+      begin
+        Result := 'Impossibile creare la cartella di installazione.';
+        Exit;
+      end;
+      if not FileCopy(OldConfig, NewConfig, True) then
+      begin
+        Result := 'Impossibile conservare la configurazione precedente. Installazione interrotta.';
+        Exit;
+      end;
+    end;
+    Exit;
+  end;
   if FileExists(OldConfig) and not FileExists(NewConfig) then
   begin
     if not RenameFile(OldConfig, NewConfig) then
