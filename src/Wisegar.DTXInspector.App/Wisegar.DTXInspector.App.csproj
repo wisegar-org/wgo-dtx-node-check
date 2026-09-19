@@ -9,6 +9,7 @@
     <Product>WGO DTX Inspector</Product>
     <Title>WGO DTX Inspector</Title>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.2" />
@@ -16,6 +17,7 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
   </ItemGroup>
   <ItemGroup>
+    <AvaloniaResource Include="Assets\app-icon.ico" />
     <ProjectReference Include="..\Wisegar.DTXInspector.Core\Wisegar.DTXInspector.Core.csproj" />
   </ItemGroup>
 </Project>

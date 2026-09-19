@@ -12,3 +12,4 @@ artifacts/inno/
 installers/*-Setup.exe
 installers/*.Setup.exe
 installers/*.Setup-*.exe
+installers/*.png

@@ -43,7 +43,7 @@ internal static class DtxInspection
             details["machine"] = snapshot.Hostname;
             results.Add(new CheckResult(category, name, CheckStatus.Observed, message, details));
         }
-        results.Add(CheckResult.Warning("dtx-inspection", "Ambito dell'ispezione",
+        results.Add(CheckResult.Warning("dtx-inspection", "Ambito dello scan",
             "Fotografia locale: nomi DTX e configurazione identificano candidati. Il PID collega porte e processi, non certifica il protocollo o il singolo servizio in processi condivisi. Campioni non atomici: i PID possono cambiare. Solo TCP; nessuna scansione di porte, UDP non incluso."));
         var services = snapshot.Services.Where(s => LooksLikeDtx(s.Name) || LooksLikeDtx(s.DisplayName)
             || profile.RequiredServices.Any(check => check.Matches(s))

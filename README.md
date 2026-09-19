@@ -21,13 +21,15 @@ Il solo avvio dell'app non crea report o log.
 `Wisegar.DTXInspector.Core` contiene controlli, inventario e report HTML. L'app unica
 `WGO DTX Inspector` richiede la scelta manuale di Core, Workstation o Client.
 All'avvio nessun nodo e' selezionato: scegliere esplicitamente dal selettore tra
-`DTX Core`, `Workstation`, `Client` e `Ispezione PC`.
+`DTX Core`, `Workstation`, `Client`, `Scan PC` e `Scan DTX`.
 Ogni nodo richiede IP statico e IPv6 disabilitato sulla scheda DTX:
 DHCP o indirizzi IPv6 presenti producono FAIL anche sui client.
 La toolbar mostra le azioni del contesto selezionato: `Configura nodo`, `Esegui test`,
-`Ispeziona DTX`, `Ispeziona PC` e `Apri report`. Il menu `Configurazione` raccoglie apertura,
-ricarica e impostazioni da inventario; `Aiuto` contiene documentazione e About.
-I menu sono accessibili da tastiera con Alt+C / Alt+A. Su finestre strette la
+`Avvia scan`, `Avvia scan PC` e `Apri report`. `Configura nodo` è l'unico accesso
+alla configurazione nella barra. `Aiuto > Strumenti avanzati` raccoglie apertura
+del JSON, ricarica e impostazioni da inventario; `Aiuto` contiene anche documentazione e About.
+Il pulsante Aiuto usa l'icona `?`, con tooltip e nome accessibile; si raggiunge
+con Tab e si attiva con Invio o Spazio. Su finestre strette la
 toolbar dispone le azioni su piu' righe senza nasconderle.
 Nel menu `Aiuto > Documentazione` sono presenti link
 ufficiali apribili manualmente. Avvio e inventario non effettuano
@@ -49,11 +51,19 @@ percorsi usati.
 - `tests/Wisegar.DTXInspector.Desktop.Smoke`: verifiche automatiche, non un'app distribuita.
 
 Aprire l'app, selezionare il nodo, quindi premere `Esegui test`.
-`Ispezione PC` ha un contesto autonomo senza ruolo DTX. Entrambe le
+`Scan PC` ha un contesto autonomo senza ruolo DTX. Entrambe le
 azioni generano un report HTML senza aprirlo automaticamente: usare `Apri report`.
 La configurazione
 si puo' aprire prima della selezione; `Ricarica piano` aggiorna il contesto DTX scelto.
 La selezione manuale resta valida durante la sessione.
+
+La UI usa un tema Fluent chiaro senza ombre: accento rosso `#DA291C`, pulsanti
+secondari con icone, superfici bianche e indicatori di esito con colore e testo.
+Menu e selettori condividono gli stati di selezione, hover e disabilitazione.
+La finestra si apre a 960 × 700 ed è ridimensionabile fino al minimo 800 × 620.
+L'icona rappresenta una W di Wisegar come tracciato sanitario dentro un monitor.
+Il selettore
+del nodo resta obbligatorio; i comandi non disponibili rimangono disabilitati.
 
 Ogni contesto conserva risultati, ricerca, filtro per esito/categoria, attività e ultimo
 report. Si può cambiare selezione durante una prova, ma parte una sola operazione alla
@@ -69,9 +79,11 @@ crea un backup e si blocca se il file è cambiato sul disco. `Prova collegamenti
 usa la bozza senza salvarla; `Salva ed esegui test` avvia la checklist completa.
 Guida operativa: [selettore e configurazione guidata](docs/desktop-workflow.md).
 
-### Ispeziona DTX
+### Scan DTX
 
-Selezionare il ruolo del PC e premere `Ispeziona DTX` nella toolbar. Il report HTML
+Scegliere `Scan DTX` dal selettore, scegliere esplicitamente il ruolo
+Core, Workstation o Client e premere `Avvia scan`. Risultati e report
+dello scan sono separati per ruolo e dai test ordinari. Il report HTML
 mostra servizi (nome interno, nome visualizzato, stato e PID), processi candidati,
 listener e connessioni TCP IPv4/IPv6 con processo proprietario e indirizzi remoti,
 schede locali con GUID, IP, DHCP, IPv6 e server DNS. La scheda configurata per DTX
@@ -84,7 +96,7 @@ non atomici e processi terminati possono limitare la correlazione; nessuna porta
 viene interpretata come prova del protocollo. Il tool Inspector e' escluso dalla
 ricerca euristica DTX. UDP non e' incluso e non viene eseguita alcuna scansione.
 
-L'ispezione esegue anche la checklist obbligatoria e le prove DNS/TCP sui target
+Lo scan esegue anche la checklist obbligatoria e le prove DNS/TCP sui target
 configurati, con timeout. Target mancanti e letture incomplete restano segnalati.
 Il report `Inspection-DTX-<ruolo>-<PC>-<data>-<id>.html` e' separato per esecuzione;
 le impostazioni e la rete del PC non vengono modificate.
@@ -121,7 +133,7 @@ packaging\inno\Build-InnoInstallers.cmd
 Lo script pubblica l'app unica in `Release`, self-contained e single-file, e genera:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-0.0.6.exe
+installers\Wisegar.DTXInspector.Setup-0.0.19.exe
 ```
 
 L'installer installa in `Program Files\WGO DTX Inspector`, richiede privilegi
@@ -159,7 +171,7 @@ e' stato eseguito. Se restano requisiti non verificati, il riepilogo indica
 
 ## Inventario PC
 
-Il pulsante `Ispeziona PC`, nel contesto omonimo, raccoglie dati locali read-only per aiutare a
+Il pulsante `Avvia scan PC`, nel contesto omonimo, raccoglie dati locali read-only per aiutare a
 preparare il file JSON di configurazione:
 
 - macchina, utente, sistema operativo e architettura;
@@ -179,7 +191,7 @@ Il report viene salvato in `ProgramData\WGO DTX Inspector\Reports\DTX-Inventory.
 - [Piano della configurazione guidata dalla UI](docs/guided-configuration-plan.md):
   progetto di riferimento per passi, validazione e salvataggio protetto.
 - [Piano tab per nodo e log leggibili](docs/tabs-and-readable-results-plan.md):
-  progetto di riferimento per Core, Workstation, Client e Ispezione PC.
+  progetto di riferimento per Core, Workstation, Client e Scan PC.
 
 Un unico file JSON contiene impostazioni comuni e impostazioni specifiche per
 nodo. L'app unica usa `appsettings.json`; le impostazioni `common` vengono

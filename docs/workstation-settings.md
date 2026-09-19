@@ -12,7 +12,7 @@ i ruoli: non occorre abilitarli nel JSON. Il tool non imposta un indirizzo fisso
 
 1. Selezionare **Workstation** nella toolbar. Il ruolo non viene dedotto dal PC.
 2. Avviare Clinic e i componenti necessari al flusso da provare. Usare
-   **Ispeziona DTX** per vedere GUID delle schede, IP/DNS, servizi, PID e porte.
+   **Scan DTX** per vedere GUID delle schede, IP/DNS, servizi, PID e porte.
    Questa azione esegue anche i controlli e le prove di rete gia configurate.
    Un primo report con dati mancanti puo' contenere WARNING: e' previsto.
 3. Recuperare dal responsabile dell'impianto il nome approvato della workstation,
@@ -44,7 +44,7 @@ Le liste `required*` di `common` vengono aggiunte a quelle della workstation.
 
 | Campo | Cosa inserire e dove trovarlo | Effetto e limiti |
 | --- | --- | --- |
-| `adapterId` | GUID esatto della scheda DTX, riportato in **Ispeziona DTX** come `adapterId`. Scegliere in base al collegamento effettivo al Core, non solo al nome Ethernet/Wi-Fi. | Seleziona la scheda su cui verificare IP, DHCP, IPv6 e DNS. Senza selezione, o con scheda inattiva, i controlli possono restare non verificati. |
+| `adapterId` | GUID esatto della scheda DTX, riportato in **Scan DTX** come `adapterId`. Scegliere in base al collegamento effettivo al Core, non solo al nome Ethernet/Wi-Fi. | Seleziona la scheda su cui verificare IP, DHCP, IPv6 e DNS. Senza selezione, o con scheda inattiva, i controlli possono restare non verificati. |
 | `expectedHostname` | Nome breve approvato della workstation, dal verbale di installazione/associazione. | Confrontato con il nome macchina locale senza distinguere maiuscole/minuscole. Non usare il nome del Core o un FQDN al posto del nome breve. Copiare il nome corrente senza baseline non dimostra che sia rimasto invariato. |
 
 DHCP attivo produce FAIL. Non e' presente un campo per confrontare l'IP locale
@@ -72,7 +72,7 @@ Il successo della singola prova DNS non chiude automaticamente i requisiti
 | --- | --- | --- |
 | `operationalUser` | Account che usa Clinic, ad esempio `CLINICA\\operatore` o `WS01\\operatore` nel testo JSON. Confermare con chi usa il PC. | Identifica l'utente cui riferire la verifica permessi. Non cambia utente, non esegue impersonazione e non richiede password. L'Inspector elevato puo' essere eseguito con un altro account. |
 | `localDtxDirectories` | Percorsi assoluti locali dei dati DTX effettivamente utilizzati. `C:\ProgramData\DTX Studio\Clinic` e' un default documentato, da confermare. | Verifica presenza/accessibilita e legge ACL quando possibile. Non scrive file di prova; i diritti effettivi restano da verificare con l'utente operativo. Percorso atteso assente/inaccessibile puo' produrre FAIL. Usare percorsi locali, non UNC o unita' mappate. Le variabili come `%ProgramData%` non vengono espanse. |
-| `dtxServiceNames` | Nomi **interni** dei servizi riconosciuti come DTX, dal campo `serviceName` dell'ispezione. | Aiuta la correlazione servizi/PID nell'ispezione. La voce infrastrutturale «servizi attivi» e' specifica del Core: sulla workstation usare `requiredServices` per verificare obbligatoriamente stato e presenza. |
+| `dtxServiceNames` | Nomi **interni** dei servizi riconosciuti come DTX, dal campo `serviceName` dello scan. | Aiuta la correlazione servizi/PID nell'ispezione. La voce infrastrutturale «servizi attivi» e' specifica del Core: sulla workstation usare `requiredServices` per verificare obbligatoriamente stato e presenza. |
 
 I nomi dei servizi possono cambiare tra versioni/installazioni. Non copiare sulla
 workstation i servizi del server Core se non sono realmente previsti su quel PC.
@@ -160,7 +160,7 @@ Queste liste sono sorelle di `infrastructure`, dentro `nodes.workstation`:
 | `requiredDirectories` / `requiredFiles` | Presenza del percorso | Inserire solo componenti confermati. Non sostituisce la verifica ACL delle directory dati. |
 | `requiredProcesses` | Processo avviato, tramite nome senza percorso | Confermare il nome rilevato e avviare Clinic prima del test se il processo e' obbligatorio. |
 | `requiredServices` | Servizio Windows presente e stato atteso | Usare `name` interno; `expectedStatuses: ["Running"]` per servizi che devono essere attivi. `displayName` e' un'etichetta; con `matchDisplayName: true` e' invece `name` a essere cercato fra i nomi visualizzati. |
-| `requiredTcpListeners` | Listener sul PC locale | Non controlla una porta remota del Core. Le porte IPC Clinic su `127.0.0.1` restano locali. La presenza non prova il processo proprietario: usare Ispeziona DTX per la correlazione. |
+| `requiredTcpListeners` | Listener sul PC locale | Non controlla una porta remota del Core. Le porte IPC Clinic su `127.0.0.1` restano locali. La presenza non prova il processo proprietario: usare Scan DTX per la correlazione. |
 
 `required: true` rende l'assenza un FAIL; `false` la segnala come WARNING.
 Errori di lettura o corrispondenze ambigue possono restare non verificati anche

@@ -145,7 +145,7 @@ public static class NodeCheckService
         }
         if (inspectDtx && !cancellation.IsCancellationRequested)
         {
-            progress?.Report(new(DateTimeOffset.Now, "INFO", "Ispezione DTX", "Correlazione servizi, processi e porte"));
+            progress?.Report(new(DateTimeOffset.Now, "INFO", "Scan DTX", "Correlazione servizi, processi e porte"));
             run = run with { Results = DtxInspection.Run(profile).Concat(run.Results).ToArray() };
         }
         if (cancellation.IsCancellationRequested && !run.Results.Any(x => x.Category == "execution"))

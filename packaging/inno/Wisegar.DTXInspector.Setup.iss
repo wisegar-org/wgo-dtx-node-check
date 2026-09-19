@@ -1,5 +1,5 @@
 #define AppName "WGO DTX Inspector"
-#define AppVersion "0.0.6"
+#define AppVersion "0.0.19"
 #define SourceDir "..\..\src\Wisegar.DTXInspector.App\bin\Release\net10.0\win-x64\publish"
 
 [Setup]
@@ -14,6 +14,7 @@ OutputBaseFilename=Wisegar.DTXInspector.Setup-{#AppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\..\src\Wisegar.DTXInspector.App\Assets\app-icon.ico
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin

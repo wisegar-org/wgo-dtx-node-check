@@ -44,7 +44,7 @@ internal static class WindowsTcpOwners
             }
             finally { Marshal.FreeHGlobal(buffer); }
         }
-        throw new InvalidDataException("Tabella TCP cambiata durante la lettura; ripetere l'ispezione.");
+        throw new InvalidDataException("Tabella TCP cambiata durante la lettura; ripetere lo scan.");
     }
 
     internal static IReadOnlyList<OwnedTcpEndpoint> Decode(byte[] bytes, bool ipv6)

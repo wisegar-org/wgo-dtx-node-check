@@ -33,6 +33,8 @@ public sealed class ConfigurationWizard : Window
     public ConfigurationWizard(string path, DtxNodeRole role)
     {
         _draft = new ConfigurationDraft(path, role);
+        _next.Classes.Add("accent"); _saveRun.Classes.Add("accent");
+        _save.Classes.Add("secondary"); _back.Classes.Add("secondary");
         Title = $"Configura {role} · {Environment.MachineName}";
         Width = 850; Height = 780; MinWidth = 680; MinHeight = 570;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;

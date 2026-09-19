@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Wisegar — healthcare software monitoring</title>
+  <rect x="0" y="0" width="64" height="64" rx="14" fill="#DA291C" />
+  <rect x="9" y="13" width="46" height="33" rx="5" fill="none" stroke="#FFFFFF" stroke-width="3" />
+  <line x1="32" y1="46" x2="32" y2="52" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+  <line x1="23" y1="52" x2="41" y2="52" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" />
+  <polyline points="15,27 20,27 25,38 32,23 39,38 44,27 49,27" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

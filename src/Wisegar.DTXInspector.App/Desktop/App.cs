@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Themes.Fluent;
 
 namespace Wisegar.DTXInspector.Desktop;
 
@@ -8,7 +7,7 @@ public sealed class App : Application
 {
     public override void Initialize()
     {
-        Styles.Add(new FluentTheme());
+        DesktopTheme.Install(this);
     }
 
     public override void OnFrameworkInitializationCompleted()

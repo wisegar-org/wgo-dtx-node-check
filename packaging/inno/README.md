@@ -31,10 +31,28 @@ packaging\inno\Build-InnoInstallers.cmd
 Output:
 
 ```text
-installers\Wisegar.DTXInspector.Setup-0.0.6.exe
+installers\Wisegar.DTXInspector.Setup-0.0.19.exe
 ```
 
 ## Comportamento Installer
+
+### Icona condivisa
+
+L'icona rappresenta Wisegar e il monitoraggio di software sanitario: una W come
+tracciato dentro uno schermo, bianca su rosso `#DA291C`, senza ombre.
+Il sorgente vettoriale è `src/Wisegar.DTXInspector.App/Assets/app-icon.svg`.
+Dopo una modifica al disegno, rigenerare PNG e ICO prima del build:
+
+```powershell
+.\packaging\Build-AppIcon.ps1
+```
+
+Lo script usa GDI+ su Windows e genera le risoluzioni 16, 20, 24, 32, 48, 64,
+128 e 256 pixel. SVG, PNG e ICO sono versionati. La stessa icona è incorporata
+nell'eseguibile, nelle finestre Avalonia e nel setup; i collegamenti usano quella
+dell'eseguibile. Installer e anteprime temporanee in `installers` non sono versionati.
+
+### Installazione
 
 - Installa in `Program Files`.
 - Richiede privilegi amministrativi.

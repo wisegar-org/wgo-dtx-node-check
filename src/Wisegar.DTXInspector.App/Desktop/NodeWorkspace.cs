@@ -10,7 +10,8 @@ namespace Wisegar.DTXInspector.Desktop;
 public sealed class NodeWorkspace : Grid
 {
     public DtxNodeRole? Role { get; }
-    public string Label => Role == DtxNodeRole.Core ? "DTX Core" : Role?.ToString() ?? "Ispezione PC";
+    public bool IsDtxInspection { get; }
+    public string Label => IsDtxInspection ? (Role is null ? "Scan DTX" : $"Scan DTX · {Role}") : Role == DtxNodeRole.Core ? "DTX Core" : Role?.ToString() ?? "Scan PC";
     public string? ReportPath { get; private set; }
     public string? LogPath { get; set; }
     public IReadOnlyList<NodeCheckItem> Results { get; private set; } = [];
@@ -23,36 +24,50 @@ public sealed class NodeWorkspace : Grid
     private readonly ListBox _results = new();
     private readonly TextBox _details = new() { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 95 };
 
-    public NodeWorkspace(DtxNodeRole? role)
+    public NodeWorkspace(DtxNodeRole? role, bool isDtxInspection = false)
     {
         Role = role;
-        RowDefinitions = new RowDefinitions("Auto,Auto,Auto,*");
+        IsDtxInspection = isDtxInspection;
+        RowDefinitions = new RowDefinitions("Auto,Auto,*");
         var color = role switch { DtxNodeRole.Core => "#2563A6", DtxNodeRole.Workstation => "#7953A6", DtxNodeRole.Client => "#087E8B", _ => "#56616F" };
-        var description = role switch
+        var description = isDtxInspection ? "SCAN DTX · Servizi · Processi · Porte TCP · IP e DNS · Checklist del ruolo" : role switch
         {
             DtxNodeRole.Core => "SERVER DTX CORE · Servizi Windows · Identità e rete · Comunicazioni",
             DtxNodeRole.Workstation => "ACQUISIZIONE / RICOSTRUZIONE · Utente operativo · Cartelle DTX · Collegamento al Core",
             DtxNodeRole.Client => "VISUALIZZAZIONE · Collegamento al Core · Identità e rete",
-            _ => "ISPEZIONE LOCALE · Software · Servizi · Processi · Porte · Nessuna verifica di conformità DTX"
+            _ => "SCAN LOCALE · Software · Servizi · Processi · Porte · Nessuna verifica di conformità DTX"
         };
-        Children.Add(new Border { Background = Brush.Parse(color), Padding = new Thickness(14), CornerRadius = new CornerRadius(5), Child =
-            new StackPanel { Spacing = 6, Children = {
-                new TextBlock { Text = description, Foreground = Brushes.White, TextWrapping = TextWrapping.Wrap, FontWeight = FontWeight.SemiBold },
-                new TextBlock { Text = role is null ? "Le osservazioni descrivono questo PC; non attestano il funzionamento di DTX." : "Requisiti: IPv4 statico e IPv6 disabilitato. Le verifiche manuali restano da confermare.", Foreground = Brushes.White, TextWrapping = TextWrapping.Wrap }
-            } } });
-        var state = new StackPanel { Margin = new Thickness(0, 10), Spacing = 5, Children = { Status, _counts, Progress } };
-        Grid.SetRow(state, 1); Children.Add(state);
+        var bannerText = new StackPanel { Spacing = 6, Margin = new Thickness(12, 0, 0, 0), Children = {
+                new TextBlock { Text = description, Foreground = Brush.Parse(color), TextWrapping = TextWrapping.Wrap, FontWeight = FontWeight.SemiBold, FontSize = 13 },
+                new TextBlock { Text = isDtxInspection && role is null ? "Scegli il ruolo da analizzare: Core, Workstation o Client. Nessun ruolo viene dedotto automaticamente." : role is null ? "Le osservazioni descrivono questo PC; non attestano il funzionamento di DTX." : "Requisiti: IPv4 statico e IPv6 disabilitato. Le verifiche manuali restano da confermare.", Foreground = DesktopTheme.Muted, TextWrapping = TextWrapping.Wrap, FontSize = 12 }
+            } };
+        Status.Foreground = DesktopTheme.Muted; Status.FontSize = 12;
+        _counts.Foreground = DesktopTheme.Ink; _counts.FontSize = 12;
+        var state = new StackPanel { Margin = new Thickness(0, 10, 0, 0), Spacing = 8, Children = { Status, _counts, Progress } };
+        bannerText.Children.Add(state);
+        var bannerLayout = new Grid { ColumnDefinitions = new ColumnDefinitions("4,*") };
+        bannerLayout.Children.Add(new Border { Background = Brush.Parse(color), CornerRadius = new CornerRadius(2) });
+        Grid.SetColumn(bannerText, 1); bannerLayout.Children.Add(bannerText);
+        Children.Add(new Border { Background = Brushes.White, BorderBrush = DesktopTheme.Line, BorderThickness = new Thickness(1),
+            Padding = new Thickness(12, 16), CornerRadius = new CornerRadius(8), Margin = new Thickness(0, 0, 0, 12), Child = bannerLayout });
         var filters = new WrapPanel { Children = { Filter, Category, Search } };
         foreach (var child in filters.Children) child.Margin = new Thickness(0, 0, 8, 8);
-        Grid.SetRow(filters, 2); Children.Add(filters);
+        Grid.SetRow(filters, 1); Children.Add(filters);
         _results.ItemTemplate = new FuncDataTemplate<NodeCheckItem>((item, _) =>
         {
             if (item is null) return null;
-            var brush = item!.Status switch { "Fail" => Brushes.Firebrick, "Warning" => Brushes.DarkGoldenrod, "Pass" => Brushes.ForestGreen, _ => Brushes.SlateGray };
-            return new StackPanel { Margin = new Thickness(4, 5), Spacing = 3, Children = {
-                new TextBlock { Text = $"{StatusLabel(item.Status)}  ·  {item.Category}  ·  {item.Name}", Foreground = brush, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap },
-                new TextBlock { Text = item.Message, TextWrapping = TextWrapping.Wrap }
-            } };
+            var (foreground, background) = item.Status switch {
+                "Fail" => ("#991B1B", "#FEE2E2"), "Warning" => ("#92400E", "#FEF3C7"),
+                "Pass" => ("#166534", "#DCFCE7"), _ => ("#475569", "#F1F5F9")
+            };
+            var badge = new Border { Background = Brush.Parse(background), CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 3), Margin = new Thickness(0, 0, 10, 4), Child =
+                new TextBlock { Text = StatusLabel(item.Status), Foreground = Brush.Parse(foreground), FontSize = 11, FontWeight = FontWeight.SemiBold } };
+            return new Border { BorderBrush = DesktopTheme.Line, BorderThickness = new Thickness(0, 0, 0, 1), Padding = new Thickness(8, 10), Child =
+                new StackPanel { Spacing = 5, Children = {
+                    new WrapPanel { Children = { badge, new TextBlock { Text = item.Name, Foreground = DesktopTheme.Ink, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 3, 0, 4) } } },
+                    new TextBlock { Text = item.Category, Foreground = DesktopTheme.Muted, FontSize = 11 },
+                    new TextBlock { Text = item.Message, TextWrapping = TextWrapping.Wrap, Foreground = DesktopTheme.Muted, FontSize = 13 }
+                } } };
         });
         _results.SelectionChanged += (_, _) =>
         {
@@ -63,7 +78,10 @@ public sealed class NodeWorkspace : Grid
         resultLayout.Children.Add(_results);
         var detail = new Expander { Header = "Dettagli del controllo selezionato", Content = _details, HorizontalAlignment = HorizontalAlignment.Stretch };
         Grid.SetRow(detail, 1); resultLayout.Children.Add(detail);
-        Grid.SetRow(resultLayout, 3); Children.Add(resultLayout);
+        _results.Background = Brushes.White;
+        _results.BorderThickness = new Thickness(0);
+        var surface = new Border { Background = Brushes.White, BorderBrush = DesktopTheme.Line, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Padding = new Thickness(8), Child = resultLayout };
+        Grid.SetRow(surface, 2); Children.Add(surface);
         Search.TextChanged += (_, _) => RefreshResults();
         Filter.SelectionChanged += (_, _) => RefreshResults();
         Category.SelectionChanged += (_, _) => RefreshResults();

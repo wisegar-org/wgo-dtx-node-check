@@ -1,14 +1,28 @@
-# Selettore e configurazione guidata — 0.0.4
+# Selettore e configurazione guidata — 0.0.19
 
-I quattro contesti del selettore rappresentano ruoli sul **PC corrente**, non computer remoti.
+I cinque contesti del selettore rappresentano ruoli o modalità di scan sul **PC corrente**, non computer remoti.
 Nessun contesto è selezionato all'avvio. La scelta non avvia scansioni o test.
+
+La finestra iniziale misura 960 × 700 ed è ridimensionabile. Il tema Fluent chiaro
+usa rosso `#DA291C`, superfici bianche e nessuna ombra. Menu, selettori e pulsanti
+usano una palette comune anche negli stati selezionato, hover e disabilitato.
+L'azione principale è sempre il primo pulsante dopo il selettore. Il pulsante
+`?` apre Aiuto; `Configura nodo` è l'unico accesso alla configurazione nella toolbar.
+La riga duplicata ruolo/nome PC sotto i pulsanti è stata rimossa: stato, data e
+conteggi sono nel banner. I report si aprono solo con `Apri report`.
 
 | Selettore | Contesto |
 | --- | --- |
 | DTX Core | Servizi, identità, rete e comunicazioni del server |
 | Workstation | Acquisizione/ricostruzione, utente operativo e directory DTX |
 | Client | Visualizzazione, identità e comunicazioni con il Core |
-| Ispezione PC | Inventario locale di software, servizi, processi, porte, IP e DNS |
+| Scan PC | Inventario locale di software, servizi, processi, porte, IP e DNS |
+| Scan DTX | Correlazione servizi/processi/porte DTX, IP e DNS, checklist del ruolo scelto |
+
+Per **Scan DTX** scegliere anche il ruolo Core, Workstation o Client nel
+selettore dedicato, poi premere **Avvia scan**, il pulsante principale.
+Nessun ruolo è dedotto da installazioni o selezioni precedenti dei test ordinari.
+Ogni ruolo conserva separatamente risultati e report dello scan.
 
 ## Configurare un nodo
 
@@ -40,7 +54,8 @@ Annullare o chiudere una bozza modificata richiede conferma dello scarto.
 
 ## Leggere le verifiche
 
-**Risultati** contiene filtri per esito/categoria, ricerca e dettagli della riga
+Il banner raccoglie descrizione del nodo, stato/data dell'esecuzione, conteggi e
+avanzamento. **Risultati** contiene filtri per esito/categoria, ricerca e dettagli della riga
 selezionata. I conteggi riguardano tutti i risultati, anche con filtri attivi.
 Le osservazioni locali sono **OSSERVATO**, separate da **SUPERATO**.
 **DA VERIFICARE** include dati mancanti, limiti di lettura e requisiti manuali.
@@ -57,7 +72,7 @@ successive fasi locali; una chiamata nativa già in corso termina prima dello st
 Le sezioni non eseguite restano segnalate e la checklist obbligatoria non scompare.
 
 Ogni esecuzione genera report e log univoci. I report DTX sono distinti per ruolo,
-macchina, data e identificativo; quelli dell'ispezione PC non attestano conformità.
+macchina, data e identificativo; quelli dello scan PC non attestano conformità.
 I report HTML raggruppano i controlli per categoria e includono regole di stampa.
 
 La verifica applicativa DTX, la direzione remota del DNS, l'assenza di ispezione

@@ -1,5 +1,121 @@
 # codex.mem
 
+## Documentation and consolidated commit - 0.0.19
+
+- Updated current workflow, red Fluent theme, compact window, icon meaning and
+  asset regeneration instructions. Corrected obsolete Alt+A documentation:
+  Help is now an icon button reached with Tab and activated with Enter/Space.
+- Installer binaries and temporary UI previews remain outside version control.
+
+## Healthcare software / Wisegar icon - 0.0.19
+
+- Replaced the network magnifier with a monitor containing a W-shaped health
+  waveform: Wisegar, healthcare software and monitoring in one flat symbol.
+- White symbol on #DA291C, no shadows. SVG is the source; regenerated PNG and
+  multi-resolution ICO used by app windows, executable, shortcuts and setup.
+- Icon renderer supports rounded polylines for the continuous W waveform.
+
+## Swiss red accent and icon - 0.0.18
+
+- Default accent is now #DA291C with pale red hover/selection surfaces and dark
+  red interaction text. Semantic result colors and role identifiers are unchanged.
+- New red/white network magnifier icon; regenerated all ICO resolutions and PNG.
+  Executable, window icons, setup and shortcuts use the updated asset.
+
+## Smaller default window - 0.0.17
+
+- Main window opens at 960 x 700 instead of 1100 x 820; remains resizable,
+  with the existing 800 x 620 minimum. Smoke layout check uses the new default.
+
+## Scan naming - 0.0.16
+
+- User-facing modes renamed Scan PC and Scan DTX, including actions, banners,
+  prompts, scan report heading, progress and current workflow documentation.
+- Security inspection terminology (TLS/DPI) retains its original meaning.
+- No behavioral changes. Release build passed.
+
+## Fluent popup and disabled state consistency - 0.0.15
+
+- Styled actual Fluent template resources for ComboBox popup surfaces, item states,
+  hover/pressed/focus states and disabled buttons (including accent actions).
+- Dropdowns use white surfaces, shared outlines, spacing and rounded items;
+  disabled actions use pale backgrounds and muted foregrounds instead of dark gray.
+- No default selection or changed enablement rules. Shadows remain disabled.
+- Desktop smoke checks passed; startup/disabled and open selector renders reviewed.
+  Optional DTX_SELECTOR_PREVIEW exports these states alongside DTX_UI_PREVIEW.
+
+## Application icon - 0.0.14
+
+- Original flat blue magnifier/network symbol in Assets/app-icon.svg. Rebuild
+  the 16-256px ICO and PNG preview with packaging/Build-AppIcon.ps1 on Windows.
+- Icon embedded in executable and Avalonia resources; all application windows
+  use it via DesktopTheme. Inno Setup uses the same ICO; shortcuts and uninstall
+  entry use the executable icon. No new runtime dependency or external icon file.
+- Desktop smoke checks passed after embedding the icon.
+
+## Flat Fluent controls and icon help - 0.0.13
+
+- Replaced the top-level Help menu label with a 40px question-mark icon button
+  and MenuFlyout. Tooltip and automation name identify Help without visible text.
+- All secondary buttons, including wizard/dialog actions, now use white surfaces;
+  textbox, selector and expander outlines use the shared border palette.
+- Suppressed Border box shadows and popup window shadow hints globally.
+- Desktop smoke checks passed; main window and open Help flyout previews reviewed.
+
+## Help menu styling and redundant status removal - 0.0.12
+
+- Help and nested menus share the white Fluent surfaces, rounded corners,
+  consistent spacing and blue selection used by the rest of the desktop.
+- Removed the idle role/machine line under the toolbar, including its empty space.
+  Selection prompts, execution/cancellation notices and errors remain visible.
+- Desktop smoke checks passed; rendered window and open Help menu reviewed.
+  Windows x64 self-contained installer rebuilt as 0.0.12.
+
+## Banner layout cleanup - 0.0.11
+
+- Execution status/date, outcome counters and progress now live inside the node
+  banner rather than above the result filters.
+- Replaced the asymmetric rounded left border with a uniform outer outline and
+  an inset solid accent strip with rounded ends, avoiding corner distortion.
+- Rendered preview reviewed; desktop smoke checks passed. Installer 0.0.11.
+
+## DTX inspection in selector - 0.0.10
+
+- Added Ispezione DTX as the fifth selector entry; removed its standalone toolbar
+  button. The shared primary action becomes Avvia ispezione in this mode.
+- A role dropdown appears for DTX inspection with no automatic choice. Core,
+  Workstation and Client each have an independent inspection workspace/report;
+  regular node tests and generic PC inventory retain their original contexts.
+- Inspection still runs the role's mandatory checklist and bounded DNS/TCP probes.
+  Save-and-run follows the selected mode. Reports remain manually opened.
+- Smoke checks cover explicit role gating and report separation across inspection
+  roles and regular tests. Release installer version 0.0.10.
+
+## Primary action order - 0.0.9
+
+- The primary execution button is always the first action after the node selector:
+  Esegui test for DTX roles, Ispeziona PC for inventory, then configuration and
+  secondary actions. No execution or selection behavior changed.
+
+## Single configuration entry - 0.0.8
+
+- Keep Configura nodo as the only configuration entry on the toolbar.
+- Moved the former Configurazione menu into Aiuto > Strumenti avanzati, retaining
+  JSON opening, plan reload and guarded inventory import without a duplicate entry.
+- All configuration actions still use the same appsettings.json.
+
+## Fluent visual refresh - 0.0.7
+
+- Added DesktopTheme: light Fluent palette with blue accent, Segoe UI, rounded
+  controls and consistent sizing. Primary test/PC inspection actions use accent
+  buttons; secondary toolbar actions use white surfaces, borders and vector icons.
+- Labeled node dropdown retained. No node/activity tabs or automatic report opening.
+- Lighter node summary cards, white results surface, compact text-labeled status
+  badges and quieter secondary text. Wizard primary actions use the same theme.
+- Smoke runner installs the production theme; optional DTX_UI_PREVIEW path exports
+  the rendered window for visual review. Actual preview reviewed at 1100x820.
+- Release build/installer remains Windows x64 self-contained, version 0.0.7.
+
 ## Results-only workspace - 0.0.6
 
 - Removed the Activity tab and redundant Results tab header at user request.

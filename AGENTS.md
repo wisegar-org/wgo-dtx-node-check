@@ -153,8 +153,10 @@ The preferred future state is a single branded app:
 - Generate HTML reports after test/inventory runs, but open them only when the user clicks Apri report; never automatically.
 - self-contained deploys for Windows x64 only
 
-The desktop uses a dropdown selector for DTX Core, Workstation, Client and PC
-inspection (the last is not a DTX role). Do not replace it with node tabs or select
+The desktop uses a dropdown selector for DTX Core, Workstation, Client, PC
+inspection and DTX inspection. DTX inspection requires a separate explicit Core,
+Workstation or Client role selection and retains independent results per role.
+PC inspection is not a DTX role. Do not replace the selector with node tabs or select
 a context automatically. Keep results, activity, filters and report/log paths bound
 to the originating context when the selection changes. Only one operation runs at a time.
 Cancellation must retain the mandatory checklist in partial node reports and must
